@@ -207,7 +207,10 @@ class _UploadDocumentsState extends State<UploadDocuments> {
                 ),
                 imageLayout(
                     fileimage: sAdharFile,
-                    urlimage: kycDetails['driver_document']['aadhar_front_photo']),
+                    urlimage: kycDetails == null
+                        ? null
+                        : kycDetails['driver_document']
+                        ['aadhar_front_photo']),
                 SizedBox(
                   height: Dim().d16,
                 ),
@@ -257,7 +260,9 @@ class _UploadDocumentsState extends State<UploadDocuments> {
                 SizedBox(height: Dim().d4),
                 imageLayout(
                     fileimage: sAdhaarBackFile,
-                    urlimage: kycDetails['driver_document']
+                    urlimage: kycDetails == null
+                        ? null
+                        : kycDetails['driver_document']
                         ['aadhar_back_photo']),
                 SizedBox(
                   height: Dim().d16,
@@ -333,7 +338,9 @@ class _UploadDocumentsState extends State<UploadDocuments> {
                 SizedBox(height: Dim().d4),
                 imageLayout(
                     fileimage: sPanFile,
-                    urlimage: kycDetails['driver_document']['pan_photo']),
+                    urlimage: kycDetails == null
+                        ? null
+                        : kycDetails['driver_document']['pan_photo']),
                 SizedBox(
                   height: Dim().d32,
                 ),
@@ -348,10 +355,12 @@ class _UploadDocumentsState extends State<UploadDocuments> {
                                   .checkInternet(context, widget)
                                   .then((value) {
                                   if (value) {
-                                    updateProject();
+                                    _formKey.currentState!.validate() ? updateProject() : null;
                                   }
                                 })
-                              : validate();
+                              : _formKey.currentState!.validate()
+                                  ? validate()
+                                  : null;
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Clr().primaryColor,
@@ -408,60 +417,19 @@ class _UploadDocumentsState extends State<UploadDocuments> {
   }
 
   validate() {
-    bool check = _formKey.currentState!.validate();
     if (sAadhar == null) {
       setState(() {
-        check = false;
         sAdhaarError = 'Aadhaar front photo is required';
       });
-    } else {
+    } else if (sBackAadhar == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if(panNumCtrl.text.isEmpty){
-      setState(() {
-        check = false;
-      });
-    }else{
-      setState(() {
-        check = true;
-      });
-    }
-    if(aadharCtrl.text.isEmpty){
-      setState(() {
-        check = false;
-      });
-    }else{
-      setState(() {
-        check = true;
-      });
-    }
-
-    if (sBackAadhar == null) {
-      setState(() {
-        check = false;
         sAdhaarBackError = 'Aadhaar back photo is required';
       });
-    } else {
+    } else if (sPan == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if (sPan == null) {
-      setState(() {
-        check = false;
         sPanError = 'Pan card photo is required';
       });
     } else {
-      setState(() {
-        check = true;
-      });
-    }
-
-    if (check) {
       STM().checkInternet(context, widget).then((value) {
         if (value) {
           updateProject();
@@ -568,9 +536,13 @@ class _UploadDocumentsState extends State<UploadDocuments> {
 
   Widget imageLayout({fileimage, urlimage}) {
     return fileimage == null
-        ? InkWell(
+        ? urlimage == null ? Container() : InkWell(
             onTap: () {
-              STM().redirect2page(ctx, Imageview(urlimage: urlimage,));
+              STM().redirect2page(
+                  ctx,
+                  Imageview(
+                    urlimage: urlimage,
+                  ));
             },
             child: SizedBox(
               height: Dim().d120,
@@ -587,11 +559,7 @@ class _UploadDocumentsState extends State<UploadDocuments> {
           )
         : InkWell(
             onTap: () {
-              STM().redirect2page(
-                  ctx,
-                  Imageview(
-                      fileimage: fileimage
-                  ));
+              STM().redirect2page(ctx, Imageview(fileimage: fileimage));
             },
             child: SizedBox(
               height: Dim().d120,

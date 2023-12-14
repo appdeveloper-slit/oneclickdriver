@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../home.dart';
 import '../login.dart';
 import '../values/colors.dart';
 import '../values/dimens.dart';
@@ -21,6 +22,7 @@ import 'app_url.dart';
 
 class STM {
   void redirect2page(BuildContext context, Widget widget) {
+    homeApiTimer.cancel();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => widget),
@@ -28,6 +30,7 @@ class STM {
   }
 
   void replacePage(BuildContext context, Widget widget) {
+    homeApiTimer.cancel();
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -49,6 +52,7 @@ class STM {
   }
 
   void finishAffinity(final BuildContext context, Widget widget) {
+    homeApiTimer.cancel();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(
@@ -238,8 +242,6 @@ class STM {
       barrierColor: Clr().black.withOpacity(0.5),
       width: 250,
       context: context,
-      dismissOnBackKeyPress: true,
-      dismissOnTouchOutside: false,
       dialogType: DialogType.NO_HEADER,
       animType: AnimType.SCALE,
       body: WillPopScope(
@@ -479,7 +481,7 @@ class STM {
       scheme: 'tel',
       path: phoneNumber,
     );
-    await launchUrl(Uri.parse(launchUri.toString()));
+    await launch(launchUri.toString());
   }
 
   //WhatsApp
@@ -633,6 +635,7 @@ class STM {
   }
 
   Future<dynamic> get(ctx, title, name) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     AwesomeDialog dialog = STM().loadingDialog(ctx, title);
     dialog.show();
@@ -656,12 +659,14 @@ class STM {
     } on DioError catch (e) {
       debugPrint(e.message);
       dialog.dismiss();
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
   Future<dynamic> getWithoutDialog(ctx, name,token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     Dio dio = Dio(
       BaseOptions(
         headers: {
@@ -683,12 +688,14 @@ class STM {
       }
     } on DioError catch (e) {
       debugPrint(e.message);
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
   Future<dynamic> postWithToken(ctx, title, name, body, token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     AwesomeDialog dialog = STM().loadingDialog(ctx, title);
     dialog.show();
@@ -718,12 +725,14 @@ class STM {
       }
     } on DioError catch (e) {
       dialog.dismiss();
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
   Future<dynamic> getcat(ctx, title, name, token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     Dio dio = Dio(
       BaseOptions(
         headers: {
@@ -747,12 +756,14 @@ class STM {
         result = response.data;
       }
     } on DioError catch (e) {
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
   Future<dynamic> postget(ctx, title, name, body, token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     AwesomeDialog dialog = STM().loadingDialog(ctx, title);
     dialog.show();
@@ -783,12 +794,14 @@ class STM {
     } on DioError catch (e) {
       debugPrint(e.message);
       dialog.dismiss();
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
   Future<dynamic> post(ctx, title, name, body) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     AwesomeDialog dialog = STM().loadingDialog(ctx, title);
     dialog.show();
@@ -815,17 +828,22 @@ class STM {
     } on DioError catch (e) {
       debugPrint(e.message);
       dialog.dismiss();
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
-  Future<dynamic> postWithoutDialog(ctx, name, body) async {
+  Future<dynamic> postWithoutDialog(ctx, name, body,token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     Dio dio = Dio(
       BaseOptions(
-        contentType: Headers.jsonContentType,
-        responseType: ResponseType.plain,
+        headers: {
+          "Content-Type": "application/json",
+          "responseType": "ResponseType.plain",
+          "Authorization": "Bearer $token",
+        },
       ),
     );
     String url = AppUrl.mainUrl + name;
@@ -836,10 +854,33 @@ class STM {
         print("Url = $url\nBody = ${body.fields}\nResponse = $response");
       }
       if (response.statusCode == 200) {
-        result = json.decode(response.data.toString());
+        // result = json.decode(response.data.toString());
+        result = response.data;
       }
     } on DioError catch (e) {
+      sp.clear();
       e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+    }
+    return result;
+  }
+
+  Future<dynamic> postWithoutDialogMethod2(name, body,token) async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
+    //Dialog
+    Dio dio = Dio(
+      BaseOptions(
+        headers: {
+          "Content-Type": "application/json",
+          "responseType": "ResponseType.plain",
+          "Authorization": "Bearer $token",
+        },
+      ),
+    );
+    String url = AppUrl.mainUrl + name;
+    Response response = await dio.post(url, data: body);
+    dynamic result;
+    if(response.statusCode == 200){
+      result = response.data;
     }
     return result;
   }
@@ -923,7 +964,7 @@ class STM {
       return NumberFormat('#,##,##0.###', 'en_IN')
           .format(amount / 100000)
           .toString() +
-          ' Lakh';
+          ' Lac';
     } else {
       // Use regular formatting for smaller amounts
       return NumberFormat('#,##0', 'en_IN').format(amount);

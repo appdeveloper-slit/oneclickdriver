@@ -2,6 +2,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'bottom_navigation/bottom_navigation.dart';
 import 'demo.dart';
@@ -16,7 +17,7 @@ import 'values/styles.dart';
 class MyProfile extends StatefulWidget {
   final index;
 
-  const MyProfile({super.key,  this.index});
+  const MyProfile({super.key, this.index});
 
   @override
   State<MyProfile> createState() => _MyProfileState();
@@ -123,7 +124,7 @@ class _MyProfileState extends State<MyProfile> {
                                   content: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     crossAxisAlignment:
-                                    CrossAxisAlignment.center,
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Image.asset('assets/exit.png'),
                                       SizedBox(
@@ -143,26 +144,29 @@ class _MyProfileState extends State<MyProfile> {
                                           onPressed: () {
                                             setState(() async {
                                               SharedPreferences sp =
-                                              await SharedPreferences
-                                                  .getInstance();
+                                                  await SharedPreferences
+                                                      .getInstance();
                                               sp.setBool('login', false);
                                               sp.clear();
-                                              STM().finishAffinity(ctx, Login());
+                                              locationApiTimer!.cancel();
+                                              STM()
+                                                  .finishAffinity(ctx, Login());
                                             });
                                           },
                                           style: ElevatedButton.styleFrom(
-                                              backgroundColor: Clr().primaryColor,
+                                              backgroundColor:
+                                                  Clr().primaryColor,
                                               shape: RoundedRectangleBorder(
                                                   borderRadius:
-                                                  BorderRadius.all(
-                                                      Radius.circular(
-                                                          Dim().d12)))),
+                                                      BorderRadius.all(
+                                                          Radius.circular(
+                                                              Dim().d12)))),
                                           child: Center(
                                             child: Text('Log Out',
                                                 style: Sty()
                                                     .mediumText
                                                     .copyWith(
-                                                    color: Clr().white)),
+                                                        color: Clr().white)),
                                           )),
                                     ],
                                   ),
@@ -221,7 +225,7 @@ class _MyProfileState extends State<MyProfile> {
                                       ),
                                   filled: true,
                                   fillColor: Clr().grey,
-                                  hintText: "Aniket Mahakal",
+                                  hintText: "Full Name",
                                   counterText: "",
                                   prefixIcon: Padding(
                                     padding: EdgeInsets.all(Dim().d16),
@@ -250,7 +254,7 @@ class _MyProfileState extends State<MyProfile> {
                                       ),
                                   filled: true,
                                   fillColor: Clr().grey,
-                                  hintText: "aniketmahakal1235@gmail.com",
+                                  hintText: "Enter The Email ID",
                                   counterText: "",
                                   prefixIcon: Padding(
                                     padding: EdgeInsets.all(Dim().d16),
@@ -280,14 +284,15 @@ class _MyProfileState extends State<MyProfile> {
                                       ),
                                   filled: true,
                                   fillColor: Clr().grey,
-                                  hintText: "2589633214",
+                                  hintText: "Mobile Number",
                                   counterText: "",
                                   suffixIcon: InkWell(
                                     onTap: () {
                                       mobileUpdate(ctx);
                                     },
                                     child: Padding(
-                                      padding: EdgeInsets.only(right: Dim().d12),
+                                      padding:
+                                          EdgeInsets.only(right: Dim().d12),
                                       child: Icon(Icons.edit,
                                           size: 20, color: Clr().primaryColor),
                                     ),
@@ -296,7 +301,6 @@ class _MyProfileState extends State<MyProfile> {
                                     padding: EdgeInsets.all(Dim().d16),
                                     child: SvgPicture.asset("assets/call.svg"),
                                   )),
-
                               validator: (value) {
                                 if (value!.isEmpty ||
                                     !RegExp(r'([5-9]{1}[0-9]{9})')
@@ -327,7 +331,8 @@ class _MyProfileState extends State<MyProfile> {
                                         backgroundColor: Clr().primaryColor,
                                         elevation: 0.5,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(50),
+                                          borderRadius:
+                                              BorderRadius.circular(50),
                                         )),
                                     child: Text(
                                       'Update Profile',
@@ -340,7 +345,8 @@ class _MyProfileState extends State<MyProfile> {
                               ),
                             ),
                             SizedBox(height: Dim().d32),
-                            Card(color: Clr().white,
+                            Card(
+                              color: Clr().white,
                               elevation: 0,
                               child: ExpansionTile(
                                 initiallyExpanded: _isExpanded,
@@ -370,16 +376,18 @@ class _MyProfileState extends State<MyProfile> {
                                 ),
                                 children: <Widget>[
                                   Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 8.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'Vehicle type',
@@ -401,9 +409,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "Van",
@@ -424,8 +433,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'Vehicle Number',
@@ -446,9 +455,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "MH05FF8968",
@@ -469,8 +479,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'License Number',
@@ -491,9 +501,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "MH05FF8968",
@@ -511,8 +522,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d12,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'RC Number',
@@ -533,9 +544,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "MH05FF8968",
@@ -592,16 +604,18 @@ class _MyProfileState extends State<MyProfile> {
                                 ),
                                 children: <Widget>[
                                   Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 8.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         SizedBox(
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'Bank Name',
@@ -623,9 +637,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "HDFC Bank",
@@ -646,8 +661,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'Account Number',
@@ -668,9 +683,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "MH05FF8968",
@@ -691,8 +707,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'IFSC Code',
@@ -713,9 +729,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "MH05FF8968",
@@ -733,8 +750,8 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d20,
                                         ),
                                         Padding(
-                                          padding:
-                                              EdgeInsets.symmetric(horizontal: 8.0),
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 8.0),
                                           child: Text(
                                             // v['title'].toString(),
                                             'Account Holder Name',
@@ -755,9 +772,10 @@ class _MyProfileState extends State<MyProfile> {
                                           decoration: Sty()
                                               .textFieldOutlineStyle
                                               .copyWith(
-                                                hintStyle: Sty().smallText.copyWith(
-                                                      color: Clr().textGrey,
-                                                    ),
+                                                hintStyle:
+                                                    Sty().smallText.copyWith(
+                                                          color: Clr().textGrey,
+                                                        ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
                                                 hintText: "Aniket Mahakal",
@@ -814,9 +832,9 @@ class _MyProfileState extends State<MyProfile> {
                                                       style: Sty()
                                                           .smallText
                                                           .copyWith(
-                                                          fontWeight:
-                                                          FontWeight
-                                                              .w600))),
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600))),
                                               TextButton(
                                                   onPressed: () {
                                                     STM().back2Previous(ctx);
@@ -825,9 +843,9 @@ class _MyProfileState extends State<MyProfile> {
                                                       style: Sty()
                                                           .smallText
                                                           .copyWith(
-                                                          fontWeight:
-                                                          FontWeight
-                                                              .w600))),
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600))),
                                             ],
                                           );
                                         });
@@ -864,6 +882,7 @@ class _MyProfileState extends State<MyProfile> {
       ),
     );
   }
+
   ///Update number pop up
   Future mobileUpdate(ctx) async {
     TextEditingController mobilectrl = TextEditingController();
@@ -887,300 +906,300 @@ class _MyProfileState extends State<MyProfile> {
               children: [
                 loading == false
                     ? Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      Text('Enter Mobile Number',
-                          style: Sty()
-                              .mediumText
-                              .copyWith(fontWeight: FontWeight.w600)),
-                      SizedBox(height: Dim().d20),
-                      TextFormField(
-                        controller: updatenumberCtrl,
-                        maxLength: 10,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        validator: (v) {
-                          if (v!.isEmpty) {
-                            return 'Mobile number is required';
-                          }
-                          if (v.length != 10) {
-                            return 'Mobile number digits must be 10';
-                          }
-                          return null;
-                        },
-                        decoration: Sty()
-                            .TextFormFieldOutlineDarkStyle
-                            .copyWith(
-                            hintText: 'Enter Mobile Number',
-                            counterText: "",
-                            hintStyle: Sty()
-                                .mediumText
-                                .copyWith(color: Clr().hintColor)),
-                      ),
-                      SizedBox(height: Dim().d20),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Clr().primaryColor),
-                                onPressed: () {
-                                  STM().back2Previous(ctx);
-                                },
-                                child: Center(
-                                  child: Text('Cancel',
-                                      style: Sty()
-                                          .mediumText
-                                          .copyWith(color: Clr().white)),
-                                )),
-                          ),
-                          SizedBox(width: Dim().d8),
-                          checkStatus == true
-                              ? CircularProgressIndicator(
-                              color: Clr().primaryColor)
-                              : Expanded(
-                            child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                    Clr().primaryColor),
-                                onPressed: () async {
-                                  if (_formKey.currentState!
-                                      .validate()) {
-                                    setState(() {
-                                      checkStatus = true;
-                                    });
-                                    FormData body =
-                                    FormData.fromMap({
-                                      'mobile':
-                                      updatenumberCtrl.text,
-                                    });
-                                    var result = await STM()
-                                        .postWithToken(
-                                        ctx,
-                                        Str().sendingOtp,
-                                        'update_mobile_sent_otp',
-                                        body,
-                                        sToken);
-                                    if (result['success'] == true) {
-                                      setState(() {
-                                        loading = true;
-                                        checkStatus = false;
-                                      });
-                                    } else {
-                                      setState(() {
-                                        checkStatus = false;
-                                        loading = false;
-                                        mobilectrl.clear();
-                                        AwesomeDialog(
-                                            context: ctx,
-                                            dismissOnBackKeyPress:
-                                            false,
-                                            dismissOnTouchOutside:
-                                            false,
-                                            dialogType:
-                                            DialogType
-                                                .ERROR,
-                                            animType:
-                                            AnimType.SCALE,
-                                            headerAnimationLoop:
-                                            true,
-                                            title: 'Note',
-                                            desc: result[
-                                            'message'],
-                                            btnOkText: "OK",
-                                            btnOkOnPress: () {
-                                              Navigator.pop(
-                                                  ctx);
-                                            },
-                                            btnOkColor:
-                                            Clr().errorRed)
-                                            .show();
-                                      });
-                                    }
-                                  }
-                                },
-                                child: Center(
-                                  child: Text('Send OTP',
-                                      style: Sty()
-                                          .mediumText
-                                          .copyWith(
-                                          color: Clr().white)),
-                                )),
-                          )
-                        ],
-                      ),
-                    ],
-                  ),
-                )
-                    : Column(
-                  children: [
-                    Text('Enter OTP',
-                        style: Sty()
-                            .mediumText
-                            .copyWith(fontWeight: FontWeight.w600)),
-                    SizedBox(height: Dim().d20),
-                    TextFormField(
-                      controller: updateUserOtpController,
-                      maxLength: 4,
-                      keyboardType: TextInputType.number,
-                      textInputAction: TextInputAction.done,
-                      decoration: Sty()
-                          .TextFormFieldOutlineDarkStyle
-                          .copyWith(
-                          hintText: 'Enter OTP',
-                          counterText: '',
-                          hintStyle: Sty()
-                              .mediumText
-                              .copyWith(color: Clr().hintColor)),
-                    ),
-                    SizedBox(
-                      height: Dim().d4,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Request new code in ",
-                          style: Sty().smallText.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Clr().textcolor),
-                        ),
-                        Visibility(
-                          visible: !again,
-                          child: TweenAnimationBuilder<Duration>(
-                              duration: const Duration(seconds: 60),
-                              tween: Tween(
-                                  begin: const Duration(seconds: 60),
-                                  end: Duration.zero),
-                              onEnd: () {
-                                // ignore: avoid_print
-                                // print('Timer ended');
-                                setState(() {
-                                  again = true;
-                                });
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            Text('Enter Mobile Number',
+                                style: Sty()
+                                    .mediumText
+                                    .copyWith(fontWeight: FontWeight.w600)),
+                            SizedBox(height: Dim().d20),
+                            TextFormField(
+                              controller: updatenumberCtrl,
+                              maxLength: 10,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.done,
+                              validator: (v) {
+                                if (v!.isEmpty) {
+                                  return 'Mobile number is required';
+                                }
+                                if (v.length != 10) {
+                                  return 'Mobile number digits must be 10';
+                                }
+                                return null;
                               },
-                              builder: (BuildContext context,
-                                  Duration value, Widget? child) {
-                                final minutes = value.inMinutes;
-                                final seconds = value.inSeconds % 60;
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 5),
+                              decoration: Sty()
+                                  .TextFormFieldOutlineDarkStyle
+                                  .copyWith(
+                                      hintText: 'Enter Mobile Number',
+                                      counterText: "",
+                                      hintStyle: Sty()
+                                          .mediumText
+                                          .copyWith(color: Clr().hintColor)),
+                            ),
+                            SizedBox(height: Dim().d20),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                          backgroundColor: Clr().primaryColor),
+                                      onPressed: () {
+                                        STM().back2Previous(ctx);
+                                      },
+                                      child: Center(
+                                        child: Text('Cancel',
+                                            style: Sty()
+                                                .mediumText
+                                                .copyWith(color: Clr().white)),
+                                      )),
+                                ),
+                                SizedBox(width: Dim().d8),
+                                checkStatus == true
+                                    ? CircularProgressIndicator(
+                                        color: Clr().primaryColor)
+                                    : Expanded(
+                                        child: ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Clr().primaryColor),
+                                            onPressed: () async {
+                                              if (_formKey.currentState!
+                                                  .validate()) {
+                                                setState(() {
+                                                  checkStatus = true;
+                                                });
+                                                FormData body =
+                                                    FormData.fromMap({
+                                                  'mobile':
+                                                      updatenumberCtrl.text,
+                                                });
+                                                var result = await STM()
+                                                    .postWithToken(
+                                                        ctx,
+                                                        Str().sendingOtp,
+                                                        'update_mobile_sent_otp',
+                                                        body,
+                                                        sToken);
+                                                if (result['success'] == true) {
+                                                  setState(() {
+                                                    loading = true;
+                                                    checkStatus = false;
+                                                  });
+                                                } else {
+                                                  setState(() {
+                                                    checkStatus = false;
+                                                    loading = false;
+                                                    mobilectrl.clear();
+                                                    AwesomeDialog(
+                                                            context: ctx,
+                                                            dismissOnBackKeyPress:
+                                                                false,
+                                                            dismissOnTouchOutside:
+                                                                false,
+                                                            dialogType:
+                                                                DialogType
+                                                                    .ERROR,
+                                                            animType:
+                                                                AnimType.SCALE,
+                                                            headerAnimationLoop:
+                                                                true,
+                                                            title: 'Note',
+                                                            desc: result[
+                                                                'message'],
+                                                            btnOkText: "OK",
+                                                            btnOkOnPress: () {
+                                                              Navigator.pop(
+                                                                  ctx);
+                                                            },
+                                                            btnOkColor:
+                                                                Clr().errorRed)
+                                                        .show();
+                                                  });
+                                                }
+                                              }
+                                            },
+                                            child: Center(
+                                              child: Text('Send OTP',
+                                                  style: Sty()
+                                                      .mediumText
+                                                      .copyWith(
+                                                          color: Clr().white)),
+                                            )),
+                                      )
+                              ],
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          Text('Enter OTP',
+                              style: Sty()
+                                  .mediumText
+                                  .copyWith(fontWeight: FontWeight.w600)),
+                          SizedBox(height: Dim().d20),
+                          TextFormField(
+                            controller: updateUserOtpController,
+                            maxLength: 4,
+                            keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            decoration: Sty()
+                                .TextFormFieldOutlineDarkStyle
+                                .copyWith(
+                                    hintText: 'Enter OTP',
+                                    counterText: '',
+                                    hintStyle: Sty()
+                                        .mediumText
+                                        .copyWith(color: Clr().hintColor)),
+                          ),
+                          SizedBox(
+                            height: Dim().d4,
+                          ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "Request new code in ",
+                                style: Sty().smallText.copyWith(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w400,
+                                    color: Clr().textcolor),
+                              ),
+                              Visibility(
+                                visible: !again,
+                                child: TweenAnimationBuilder<Duration>(
+                                    duration: const Duration(seconds: 60),
+                                    tween: Tween(
+                                        begin: const Duration(seconds: 60),
+                                        end: Duration.zero),
+                                    onEnd: () {
+                                      // ignore: avoid_print
+                                      // print('Timer ended');
+                                      setState(() {
+                                        again = true;
+                                      });
+                                    },
+                                    builder: (BuildContext context,
+                                        Duration value, Widget? child) {
+                                      final minutes = value.inMinutes;
+                                      final seconds = value.inSeconds % 60;
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 5),
+                                        child: Text(
+                                          "0$minutes:$seconds",
+                                          textAlign: TextAlign.center,
+                                          style: Sty().smallText.copyWith(
+                                              color: Clr().secondary,
+                                              fontWeight: FontWeight.w600,
+                                              fontFamily: "MulshiSemi",
+                                              fontSize: 14),
+                                        ),
+                                      );
+                                    }),
+                              ),
+                              // Visibility(
+                              //   visible: !isResend,
+                              //   child: Text("I didn't receive a code! ${(  sTime  )}",
+                              //       style: Sty().mediumText),
+                              // ),
+                              Visibility(
+                                visible: again,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      again = false;
+                                    });
+                                    resendOTP(updatenumberCtrl.text);
+                                  },
                                   child: Text(
-                                    "0$minutes:$seconds",
-                                    textAlign: TextAlign.center,
+                                    'Resend',
                                     style: Sty().smallText.copyWith(
                                         color: Clr().secondary,
                                         fontWeight: FontWeight.w600,
                                         fontFamily: "MulshiSemi",
                                         fontSize: 14),
                                   ),
-                                );
-                              }),
-                        ),
-                        // Visibility(
-                        //   visible: !isResend,
-                        //   child: Text("I didn't receive a code! ${(  sTime  )}",
-                        //       style: Sty().mediumText),
-                        // ),
-                        Visibility(
-                          visible: again,
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                again = false;
-                              });
-                              resendOTP(updatenumberCtrl.text);
-                            },
-                            child: Text(
-                              'Resend',
-                              style: Sty().smallText.copyWith(
-                                  color: Clr().secondary,
-                                  fontWeight: FontWeight.w600,
-                                  fontFamily: "MulshiSemi",
-                                  fontSize: 14),
-                            ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: Dim().d20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: Clr().primaryColor),
-                              onPressed: () {
-                                setState(() {
-                                  loading = false;
-                                  otpctrl.clear();
-                                  mobilectrl.clear();
-                                });
-                              },
-                              child: Center(
-                                child: Text('Back',
-                                    style: Sty()
-                                        .mediumText
-                                        .copyWith(color: Clr().white)),
-                              )),
-                        ),
-                        SizedBox(width: Dim().d12),
-                        checkStatus1 == true
-                            ? CircularProgressIndicator(
-                            color: Clr().primaryColor)
-                            : Expanded(
-                          child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                  Clr().primaryColor),
-                              onPressed: () async {
-                                setState(() {
-                                  checkStatus1 = true;
-                                });
-                                FormData body = FormData.fromMap({
-                                  'mobile': updatenumberCtrl.text,
-                                  'otp':
-                                  updateUserOtpController.text,
-                                });
-                                var result = await STM()
-                                    .postWithToken(
-                                    ctx,
-                                    Str().processing,
-                                    'update_mobile_verify_otp',
-                                    body,
-                                    sToken);
-                                if (result['success']) {
-                                  setState(() {
-                                    checkStatus1 = false;
-                                    otpctrl.clear();
-                                    mobilectrl.clear();
-                                  });
-                                  STM().replacePage(
-                                      ctx, MyProfile(index: 3));
-                                } else {
-                                  setState(() {
-                                    checkStatus1 = false;
-                                    otpctrl.clear();
-                                  });
-                                  STM().errorDialog(
-                                      ctx, result['message']);
-                                }
-                              },
-                              child: Center(
-                                child: Text('Submit',
-                                    style: Sty()
-                                        .mediumText
-                                        .copyWith(
-                                        color: Clr().white)),
-                              )),
-                        )
-                      ],
-                    ),
-                  ],
-                ),
+                          SizedBox(height: Dim().d20),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                        backgroundColor: Clr().primaryColor),
+                                    onPressed: () {
+                                      setState(() {
+                                        loading = false;
+                                        otpctrl.clear();
+                                        mobilectrl.clear();
+                                      });
+                                    },
+                                    child: Center(
+                                      child: Text('Back',
+                                          style: Sty()
+                                              .mediumText
+                                              .copyWith(color: Clr().white)),
+                                    )),
+                              ),
+                              SizedBox(width: Dim().d12),
+                              checkStatus1 == true
+                                  ? CircularProgressIndicator(
+                                      color: Clr().primaryColor)
+                                  : Expanded(
+                                      child: ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Clr().primaryColor),
+                                          onPressed: () async {
+                                            setState(() {
+                                              checkStatus1 = true;
+                                            });
+                                            FormData body = FormData.fromMap({
+                                              'mobile': updatenumberCtrl.text,
+                                              'otp':
+                                                  updateUserOtpController.text,
+                                            });
+                                            var result = await STM()
+                                                .postWithToken(
+                                                    ctx,
+                                                    Str().processing,
+                                                    'update_mobile_verify_otp',
+                                                    body,
+                                                    sToken);
+                                            if (result['success']) {
+                                              setState(() {
+                                                checkStatus1 = false;
+                                                otpctrl.clear();
+                                                mobilectrl.clear();
+                                              });
+                                              STM().replacePage(
+                                                  ctx, MyProfile(index: 3));
+                                            } else {
+                                              setState(() {
+                                                checkStatus1 = false;
+                                                otpctrl.clear();
+                                              });
+                                              STM().errorDialog(
+                                                  ctx, result['message']);
+                                            }
+                                          },
+                                          child: Center(
+                                            child: Text('Submit',
+                                                style: Sty()
+                                                    .mediumText
+                                                    .copyWith(
+                                                        color: Clr().white)),
+                                          )),
+                                    )
+                            ],
+                          ),
+                        ],
+                      ),
               ],
             ),
           );

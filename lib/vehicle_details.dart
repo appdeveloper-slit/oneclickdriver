@@ -62,7 +62,7 @@ class _VehicleDetailsState extends State<VehicleDetails> {
     });
     STM().checkInternet(context, widget).then((value) {
       if (value) {
-        widget.type == 'home' ? redoKycApi() : null;
+        redoKycApi();
         getVehicleType();
       }
     });
@@ -247,8 +247,9 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 ),
                 imageLayout(
                     fileimage: sVehiclePhotoFile,
-                    urlimage: vehicleDetails['vehicle_detail']
-                        ['vehicle_photo']),
+                    urlimage: vehicleDetails['vehicle_detail'] == null
+                        ? null
+                        : vehicleDetails['vehicle_detail']['vehicle_photo']),
                 SizedBox(
                   height: Dim().d16,
                 ),
@@ -328,8 +329,9 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 ),
                 imageLayout(
                     fileimage: sLicensePhotoFile,
-                    urlimage: vehicleDetails['vehicle_detail']
-                        ['license_photo']),
+                    urlimage: vehicleDetails['vehicle_detail'] == null
+                        ? null
+                        : vehicleDetails['vehicle_detail']['license_photo']),
                 SizedBox(
                   height: Dim().d16,
                 ),
@@ -406,7 +408,9 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 ),
                 imageLayout(
                     fileimage: sRcPhotoFile,
-                    urlimage: vehicleDetails['vehicle_detail']['rc_photo']),
+                    urlimage: vehicleDetails['vehicle_detail'] == null
+                        ? null
+                        : vehicleDetails['vehicle_detail']['rc_photo']),
                 SizedBox(
                   height: Dim().d32,
                 ),
@@ -585,7 +589,9 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 ),
                 imageLayout(
                     fileimage: sCanChequePhotoFile,
-                    urlimage: vehicleDetails['vehicle_detail']['cheque_photo']),
+                    urlimage: vehicleDetails['vehicle_detail'] == null
+                        ? null
+                        : vehicleDetails['vehicle_detail']['cheque_photo']),
                 SizedBox(
                   height: Dim().d32,
                 ),
@@ -600,10 +606,11 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                                   .checkInternet(context, widget)
                                   .then((value) {
                                   if (value) {
-                                    updateProject();
+                                    _formKey.currentState!.validate() ? updateProject() : null;
                                   }
                                 })
-                              : validate();
+                              :
+                            _formKey.currentState!.validate() ? validate() : null;
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Clr().primaryColor,
@@ -668,27 +675,29 @@ class _VehicleDetailsState extends State<VehicleDetails> {
 
   Widget imageLayout({fileimage, urlimage}) {
     return fileimage == null
-        ? InkWell(
-            onTap: () {
-              STM().redirect2page(
-                  ctx,
-                  Imageview(
-                    urlimage: urlimage,
-                  ));
-            },
-            child: SizedBox(
-              height: Dim().d120,
-              width: double.infinity,
-              child: ClipRRect(
-                borderRadius: BorderRadius.all(Radius.circular(Dim().d12)),
-                child: CachedNetworkImage(
-                  fit: BoxFit.cover,
-                  imageUrl: urlimage,
-                  placeholder: (context, url) => STM().loadingPlaceHolder(),
+        ? urlimage == null
+            ? Container()
+            : InkWell(
+                onTap: () {
+                  STM().redirect2page(
+                      ctx,
+                      Imageview(
+                        urlimage: urlimage,
+                      ));
+                },
+                child: SizedBox(
+                  height: Dim().d120,
+                  width: double.infinity,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.all(Radius.circular(Dim().d12)),
+                    child: CachedNetworkImage(
+                      fit: BoxFit.cover,
+                      imageUrl: urlimage,
+                      placeholder: (context, url) => STM().loadingPlaceHolder(),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
+              )
         : InkWell(
             onTap: () {
               STM().redirect2page(ctx, Imageview(fileimage: fileimage));
@@ -707,78 +716,27 @@ class _VehicleDetailsState extends State<VehicleDetails> {
   }
 
   validate() {
-    bool check = _formKey.currentState!.validate();
     if (sVehicle == null) {
       setState(() {
-        check = false;
         sVehiclePhotoError = 'Vehicle photo is required';
       });
-    } else {
+    } else if (sLicense == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if (sLicense == null) {
-      setState(() {
-        check = false;
         sLicensePhotoError = 'License photo is required';
       });
-    } else {
+    } else if (sRC == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if (sRC == null) {
-      setState(() {
-        check = false;
         sRcPhotoError = 'Rc photo is required';
       });
-    } else {
+    } else if (sCheque == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if (sCheque == null) {
-      setState(() {
-        check = false;
         sCanChequePhotoError = 'Cancel Cheque photo is required';
       });
-    } else {
+    } else if (vehicleType == null) {
       setState(() {
-        check = true;
-      });
-    }
-
-    if (vehicleType == null) {
-      setState(() {
-        check = false;
         sVehicleTypeError = 'Vehicle type is required';
       });
     } else {
-      setState(() {
-        check = true;
-      });
-    }
-    if (vehicleNoCtrl.text.isEmpty &&
-        licenseCtrl.text.isEmpty &&
-        rcNoCtrl.text.isEmpty &&
-        bankNameCtrl.text.isEmpty &&
-        accNumCtrl.text.isEmpty &&
-        ifscCtrl.text.isEmpty &&
-        accNameCtrl.text.isEmpty) {
-      setState(() {
-        check = false;
-      });
-    } else {
-      setState(() {
-        check = true;
-      });
-    }
-
-    if (check) {
       STM().checkInternet(context, widget).then((value) {
         if (value) {
           updateProject();
@@ -902,14 +860,27 @@ class _VehicleDetailsState extends State<VehicleDetails> {
     if (success) {
       setState(() {
         vehicleDetails = result['data'];
-        vehicleType = vehicleDetails['vehicle_detail']['vehicle_id'].toString();
-        vehicleNoCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['vehicle_number'].toString());
-        licenseCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['license_number'].toString());
-        rcNoCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['rc_number'].toString());
-        bankNameCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['bank_name'].toString());
-        accNumCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['account_number'].toString());
-        accNameCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['account_holder_name'].toString());
-        ifscCtrl = TextEditingController(text: vehicleDetails['vehicle_detail']['ifsc_code'].toString());
+        if(vehicleDetails != null){
+          vehicleType = vehicleDetails['vehicle_detail']['vehicle_id'].toString();
+          vehicleNoCtrl = TextEditingController(
+              text:
+              vehicleDetails['vehicle_detail']['vehicle_number'].toString());
+          licenseCtrl = TextEditingController(
+              text:
+              vehicleDetails['vehicle_detail']['license_number'].toString());
+          rcNoCtrl = TextEditingController(
+              text: vehicleDetails['vehicle_detail']['rc_number'].toString());
+          bankNameCtrl = TextEditingController(
+              text: vehicleDetails['vehicle_detail']['bank_name'].toString());
+          accNumCtrl = TextEditingController(
+              text:
+              vehicleDetails['vehicle_detail']['account_number'].toString());
+          accNameCtrl = TextEditingController(
+              text: vehicleDetails['vehicle_detail']['account_holder_name']
+                  .toString());
+          ifscCtrl = TextEditingController(
+              text: vehicleDetails['vehicle_detail']['ifsc_code'].toString());
+        }
       });
     } else {
       STM().errorDialog(ctx, result['message']);

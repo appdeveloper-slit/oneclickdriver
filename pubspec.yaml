@@ -50,13 +50,20 @@ dependencies:
   sqflite: ^2.2.8+4
   geolocator: ^9.0.2
   geocoding: ^2.1.0
+  permission_handler: ^11.0.1
   lottie: ^2.3.2
+  flutter_local_notifications: ^16.2.0
   share_plus: ^4.4.0
   flutter_cupertino_datetime_picker: ^3.0.0
   timelines: ^0.1.0
   file_picker: ^5.3.1
   onesignal_flutter: ^5.0.4
   double_back_to_close: ^2.0.0
+  upgrader: ^8.1.0
+  flutter_background_service: ^5.0.5
+  pusher_channels_flutter: ^2.2.0
+  google_maps_flutter: ^2.5.0
+  maps_launcher: ^2.2.0
 
 dev_dependencies:
   # rules and activating additional ones.

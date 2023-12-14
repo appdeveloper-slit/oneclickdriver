@@ -80,7 +80,7 @@ class _NotificationPageState extends State<NotificationPage> {
             ListView.builder(
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
-              itemCount: 12,
+              itemCount: 0,
               itemBuilder: (context, index) {
                 // var v = notificationList[index];
                 return Card(

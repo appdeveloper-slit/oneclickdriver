@@ -1,7 +1,18 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:flutter_background_service_android/flutter_background_service_android.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
+import 'package:maps_launcher/maps_launcher.dart';
 import 'package:oneclick_driver/bottom_navigation/bottom_navigation.dart';
 import 'package:oneclick_driver/demo.dart';
 import 'package:oneclick_driver/login.dart';
@@ -11,13 +22,147 @@ import 'package:oneclick_driver/values/colors.dart';
 import 'package:oneclick_driver/values/dimens.dart';
 import 'package:oneclick_driver/vehicle_details.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timelines/timelines.dart';
+import 'package:upgrader/upgrader.dart';
 import 'manage/static_method.dart';
+import 'map.dart';
 import 'my_rides.dart';
 import 'notification.dart';
 import 'values/strings.dart';
 import 'values/styles.dart';
 import 'package:double_back_to_close/double_back_to_close.dart';
+
+var curtLng, curtLat, usertoken, city;
+final service = FlutterBackgroundService();
+bool? checkRun;
+Timer homeApiTimer = Timer(Duration(seconds: 1),() {
+
+},);
+Timer? locationApiTimer;
+
+checkAppPermission() async {
+  SharedPreferences sp = await SharedPreferences.getInstance();
+  bool check = await Permission.location.isGranted;
+  if (check) {
+    Position? position = await Geolocator.getCurrentPosition();
+    List<Placemark> list =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
+    city = list[0].subLocality ?? list[1].subLocality;
+    FormData body = FormData.fromMap({
+      'latitude': position.latitude,
+      'longitude': position.longitude,
+    });
+    //Output
+    await STM().postWithoutDialogMethod2(
+        "update_location", body, sp.getString('token'));
+    print('api run');
+  } else {
+    locationApiTimer!.cancel();
+  }
+}
+
+Future<void> initializeService() async {
+  final service = FlutterBackgroundService();
+
+  /// OPTIONAL, using custom notification channel id
+  AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'OneClickDriver', // id
+    'One Click Driver Current Location Fetching', // title
+    // description: 'Current Location: $city', // description
+    importance: Importance.low, // importance must be at low or higher level
+  );
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  if (Platform.isIOS || Platform.isAndroid) {
+    await flutterLocalNotificationsPlugin.initialize(
+      const InitializationSettings(
+        iOS: DarwinInitializationSettings(),
+        android: AndroidInitializationSettings('ic_bg_service_small'),
+      ),
+    );
+  }
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(channel);
+
+  await service.configure(
+    androidConfiguration: AndroidConfiguration(
+      // this will be executed when app is in foreground or background in separated isolate
+      onStart: onStart,
+      // auto start service
+      autoStart: true,
+      isForegroundMode: true,
+      notificationChannelId: 'OneClickDriver',
+      initialNotificationTitle: 'One Click Driver',
+      initialNotificationContent: 'Current Location Fetching',
+      foregroundServiceNotificationId: 888,
+    ),
+    iosConfiguration: IosConfiguration(
+      // auto start service
+      autoStart: true,
+      // this will be executed when app is in foreground in separated isolate
+      onForeground: onStart,
+      // you have to enable background fetch capability on xcode project
+      onBackground: onIosBackground,
+    ),
+  );
+}
+
+// to ensure this is executed
+// run app from xcode, then from xcode menu, select Simulate Background Fetch
+
+@pragma('vm:entry-point')
+Future<bool> onIosBackground(ServiceInstance service) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  SharedPreferences preferences = await SharedPreferences.getInstance();
+  await preferences.reload();
+  final log = preferences.getStringList('log') ?? <String>[];
+  log.add(DateTime.now().toIso8601String());
+  await preferences.setStringList('log', log);
+
+  return true;
+}
+
+@pragma('vm:entry-point')
+void onStart(ServiceInstance service) async {
+  // Only available for flutter 3.0.0 and later
+  DartPluginRegistrant.ensureInitialized();
+  // For flutter prior to version 3.0.0
+  // We have to register the plugin manually
+
+  SharedPreferences preferences = await SharedPreferences.getInstance();
+  await preferences.setString("hello", "world");
+
+  /// OPTIONAL when use custom notification
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+
+  if (service is AndroidServiceInstance) {
+    service.on('setAsForeground').listen((event) {
+      service.setAsForegroundService();
+    });
+
+    service.on('setAsBackground').listen((event) {
+      service.setAsBackgroundService();
+    });
+  }
+
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
+
+  Timer.periodic(Duration(minutes: 1), (timer) async {
+    checkAppPermission();
+  });
+}
 
 class Home extends StatefulWidget {
   @override
@@ -26,14 +171,38 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   late BuildContext ctx;
-
   GlobalKey<ScaffoldState> scaffoldState = GlobalKey<ScaffoldState>();
 
+  // this will be used as notification channel id
+  var notificationChannelId = 'my_foreground';
+
+  locationApiTime() {
+    locationApiTimer = Timer.periodic(Duration(minutes: 1), (timer) {
+      print('location timer start');
+      checkAppPermission();
+    });
+  }
+
+  homeApiTime() {
+    homeApiTimer = Timer.periodic(Duration(seconds: 10), (timer) {
+      print('home timer start');
+      getHomeApi();
+    });
+  }
+
+// this will be used for notification id, So you can update your custom notification with this id.
+  var notificationId = 888;
   int _currentState = 1;
   bool? loading;
   int selectedIndex = -1;
-  var pageType, incomeData, ridesTodayData, leadsTodayData;
-  String? sValue, usertoken;
+
+  var pageType,
+      incomeData,
+      ridesTodayData,
+      leadsTodayData,
+      pageUpdate,
+      walletBalance;
+  String? sValue;
   List<dynamic> requestList = [];
   List<String> cancelList = [
     "Bad Location",
@@ -44,6 +213,7 @@ class _HomeState extends State<Home> {
     "The passenger is unreachable",
     "Other",
   ];
+  Upgrader _upgrader = Upgrader();
 
   getSession() async {
     SharedPreferences sp = await SharedPreferences.getInstance();
@@ -53,20 +223,33 @@ class _HomeState extends State<Home> {
     if (usertoken == null) {
       setState(() {
         sp.clear();
-        STM().finishAffinity(ctx, Login());
+        STM().errorDialogWithAffinity(
+            ctx, 'Something went wrong!! Please Login', Login());
       });
     }
     STM().checkInternet(context, widget).then((value) {
       if (value) {
         print('usertoken : ${usertoken}');
+        homeApiTime();
         getHomeApi();
       }
     });
+    bool check = await Permission.location.isGranted;
+    if (check) {
+      Position? position = await Geolocator.getCurrentPosition();
+      locationApiTime();
+    } else {
+      setState(() {
+        locationApiTimer!.cancel();
+      });
+      locationDialog();
+    }
   }
 
   @override
   void initState() {
     getSession();
+    _upgrader.initialize();
     // TODO: implement initState
     super.initState();
   }
@@ -115,20 +298,63 @@ class _HomeState extends State<Home> {
                               shape: BoxShape.circle),
                           child: SvgPicture.asset("assets/menu.svg")),
                     )),
+                actions: [
+                  Padding(
+                    padding: EdgeInsets.only(
+                        top: Dim().d8, bottom: Dim().d8, right: Dim().d12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.all(Radius.circular(Dim().d52)),
+                        color: Clr().primaryColor,
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: Dim().d12, vertical: Dim().d12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            SvgPicture.asset('assets/wallet.svg'),
+                            SizedBox(
+                              width: Dim().d12,
+                            ),
+                            Text(
+                                '₹ ${STM().formatAmount(int.parse(walletBalance == null ? '0' : walletBalance.toString()))}')
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                ],
               ),
-        drawer:
-            pageType != null && pageType['status'] == 2 ? null : drawerLayout(),
+        drawer: pageType != null && pageType['status'] == 2 ? null : drawerLayout(),
         body: loading == true
-            ? SingleChildScrollView(
-                padding: EdgeInsets.all(Dim().d16),
-                child: Column(
-                  children: [
-                    if (pageType != null && pageType['status'] == 0)
-                      underReview(),
-                    if (pageType != null && pageType['status'] == 2)
-                      kycRejected(),
-                    if (pageType == null) HomePageLayout(),
-                  ],
+            ? UpgradeAlert(
+                upgrader: Upgrader(
+                  canDismissDialog: false,
+                  dialogStyle: UpgradeDialogStyle.material,
+                  durationUntilAlertAgain: const Duration(minutes: 2),
+                  showReleaseNotes: true,
+                  onUpdate: () {
+                    Future.delayed(Duration(seconds: 1), () {
+                      SystemNavigator.pop();
+                    });
+                    return true;
+                  },
+                  showIgnore: pageUpdate ?? true,
+                  showLater: pageUpdate ?? true,
+                ),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(Dim().d16),
+                  child: Column(
+                    children: [
+                      if (pageType != null && pageType['status'] == 0)
+                        underReview(),
+                      if (pageType != null && pageType['status'] == 2)
+                        kycRejected(),
+                      if (pageType == null) HomePageLayout(),
+                    ],
+                  ),
                 ),
               )
             : Container(),
@@ -195,212 +421,197 @@ class _HomeState extends State<Home> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Clr().lightGrey.withOpacity(0.2),
-                  spreadRadius: 0.001,
-                  blurRadius: 10,
-                  offset: Offset(0, -5), // changes position of shadow
-                ),
-              ],
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
             ),
-            child: Card(
-              elevation: 0.1,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              )),
-              color: Color(0xffFFFCE3),
-              child: Padding(
-                padding: EdgeInsets.all(Dim().d12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(55),
-                          color: Clr().white,
-                          border: Border.all(
-                            color: Color(0xffFFE08F),
-                          )),
-                      child: Padding(
-                        padding: EdgeInsets.all(Dim().d12),
-                        child: SvgPicture.asset("assets/bag.svg"),
-                      ),
-                    ),
-                    SizedBox(
-                      height: Dim().d12,
-                    ),
-                    Container(
-                        height: 20,
-                        child: Text(
-                          "Total Income",
-                          overflow: TextOverflow.ellipsis,
-                        )),
-                    Text(
-                      STM().formatAmount(int.parse(incomeData ?? '0')),
-                      style: Sty().smallText.copyWith(
+            boxShadow: [
+              BoxShadow(
+                color: Clr().lightGrey.withOpacity(0.2),
+                spreadRadius: 0.001,
+                blurRadius: 10,
+                offset: Offset(0, -5), // changes position of shadow
+              ),
+            ],
+          ),
+          child: Card(
+            elevation: 0.1,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
+            )),
+            color: Color(0xffFFFCE3),
+            child: Padding(
+              padding: EdgeInsets.all(Dim().d12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(55),
+                        color: Clr().white,
+                        border: Border.all(
                           color: Color(0xffFFE08F),
-                          fontWeight: FontWeight.w800),
+                        )),
+                    child: Padding(
+                      padding: EdgeInsets.all(Dim().d12),
+                      child: SvgPicture.asset("assets/bag.svg"),
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    height: Dim().d12,
+                  ),
+                  Container(
+                      height: 36,
+                      child: Text(
+                        "Total Income",
+                        overflow: TextOverflow.fade,
+                      )),
+                  Text(
+                    STM().formatAmount(incomeData ?? 0),
+                    style: Sty().smallText.copyWith(
+                        color: Color(0xffFFE08F), fontWeight: FontWeight.w800),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-        SizedBox(
-          width: Dim().d2,
-        ),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Clr().lightGrey.withOpacity(0.2),
-                  spreadRadius: 0.001,
-                  blurRadius: 10,
-                  offset: Offset(0, -5), // changes position of shadow
-                ),
-              ],
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
             ),
-            child: Card(
-              elevation: 0.1,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              )),
-              color: Color(0xffE9FFE3),
-              child: Padding(
-                padding: EdgeInsets.all(Dim().d12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(55),
-                          color: Clr().white,
-                          border: Border.all(
-                            color: Color(0xff93FFBE),
-                          )),
-                      child: Padding(
-                        padding: EdgeInsets.all(Dim().d8),
-                        child: SvgPicture.asset("assets/truck.svg"),
-                      ),
-                    ),
-                    SizedBox(
-                      height: Dim().d12,
-                    ),
-                    Container(
-                        height: 20,
-                        child: Text(
-                          "Rides (Today)",
-                          overflow: TextOverflow.ellipsis,
+            boxShadow: [
+              BoxShadow(
+                color: Clr().lightGrey.withOpacity(0.2),
+                spreadRadius: 0.001,
+                blurRadius: 10,
+                offset: Offset(0, -5), // changes position of shadow
+              ),
+            ],
+          ),
+          child: Card(
+            elevation: 0.1,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
+            )),
+            color: Color(0xffE9FFE3),
+            child: Padding(
+              padding: EdgeInsets.all(Dim().d12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(55),
+                        color: Clr().white,
+                        border: Border.all(
+                          color: Color(0xff93FFBE),
                         )),
-                    Text(
-                      STM().formatAmount(int.parse(ridesTodayData ?? '0')),
-                      style: Sty().smallText.copyWith(
-                          color: Color(0xff07CB55),
-                          fontWeight: FontWeight.w800),
+                    child: Padding(
+                      padding: EdgeInsets.all(Dim().d8),
+                      child: SvgPicture.asset("assets/truck.svg"),
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    height: Dim().d12,
+                  ),
+                  Container(
+                      height: 36,
+                      child: Text(
+                        "Rides (Today)",
+                        overflow: TextOverflow.fade,
+                      )),
+                  Text(
+                    STM().formatAmount(ridesTodayData ?? 0),
+                    style: Sty().smallText.copyWith(
+                        color: Color(0xff07CB55), fontWeight: FontWeight.w800),
+                  ),
+                ],
               ),
             ),
           ),
         ),
-        SizedBox(
-          width: Dim().d2,
-        ),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Clr().lightGrey.withOpacity(0.2),
-                  spreadRadius: 0.001,
-                  blurRadius: 10,
-                  offset: Offset(0, -5), // changes position of shadow
-                ),
-              ],
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
             ),
-            child: Card(
-              elevation: 0.1,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(60),
-              )),
-              color: Color(0xffE3E6FF),
-              child: Padding(
-                padding: EdgeInsets.all(Dim().d12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 50,
-                      width: 50,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(55),
-                          color: Clr().white,
-                          border: Border.all(
-                            color: Color(0xff928FFF),
-                          )),
-                      child: Padding(
-                        padding: EdgeInsets.all(Dim().d12),
-                        child: SvgPicture.asset("assets/cancelled.svg"),
-                      ),
-                    ),
-                    SizedBox(
-                      height: Dim().d12,
-                    ),
-                    SizedBox(
-                        height: Dim().d20,
-                        child: const Text(
-                          "Leads (Today)",
-                          overflow: TextOverflow.ellipsis,
-                        )),
-                    Text(
-                      STM().formatAmount(int.parse(leadsTodayData ?? '0')),
-                      style: Sty().smallText.copyWith(
+            boxShadow: [
+              BoxShadow(
+                color: Clr().lightGrey.withOpacity(0.2),
+                spreadRadius: 0.001,
+                blurRadius: 10,
+                offset: Offset(0, -5), // changes position of shadow
+              ),
+            ],
+          ),
+          child: Card(
+            elevation: 0.1,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(60),
+            )),
+            color: Color(0xffE3E6FF),
+            child: Padding(
+              padding: EdgeInsets.all(Dim().d12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(55),
+                        color: Clr().white,
+                        border: Border.all(
                           color: Color(0xff928FFF),
-                          fontWeight: FontWeight.w800),
+                        )),
+                    child: Padding(
+                      padding: EdgeInsets.all(Dim().d12),
+                      child: SvgPicture.asset("assets/cancelled.svg"),
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    height: Dim().d12,
+                  ),
+                  SizedBox(
+                      height: Dim().d36,
+                      child: const Text(
+                        "Leads (Today)",
+                        overflow: TextOverflow.fade,
+                      )),
+                  Text(
+                    STM().formatAmount(leadsTodayData ?? 0),
+                    style: Sty().smallText.copyWith(
+                        color: Color(0xff928FFF), fontWeight: FontWeight.w800),
+                  ),
+                ],
               ),
             ),
           ),
@@ -429,7 +640,9 @@ class _HomeState extends State<Home> {
                         child: Column(
                           children: [
                             Text('Reasons',
-                                style: Sty().mediumBoldText.copyWith(color: Clr().black)),
+                                style: Sty()
+                                    .mediumBoldText
+                                    .copyWith(color: Clr().black)),
                             ListView.builder(
                                 itemCount: pageType['reasons'].length,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -580,7 +793,18 @@ class _HomeState extends State<Home> {
     );
   }
 
-  Widget CardLayout() {
+  CardLayout(v, index,list) {
+    bool? twincon;
+    int? minutes, seconds;
+    final now = DateTime.now();
+    final timeGet = DateTime.parse(v['created_at'].toString());
+    final aftercurrentTime = timeGet.add(Duration(minutes: 10));
+    if (now.isBefore(aftercurrentTime)) {
+      minutes = int.parse(DateFormat('mm').format(aftercurrentTime)) -
+          int.parse(DateFormat('mm').format(now));
+      seconds = int.parse(DateFormat('ss').format(aftercurrentTime)) -
+          int.parse(DateFormat('ss').format(now));
+    }
     return Column(
       children: [
         Container(
@@ -590,7 +814,7 @@ class _HomeState extends State<Home> {
                   color: Clr().borderColor.withOpacity(1),
                   spreadRadius: 0.1,
                   blurRadius: 6,
-                  offset: Offset(
+                  offset: const Offset(
                     0,
                     6,
                   ) // changes position of shadow
@@ -608,136 +832,180 @@ class _HomeState extends State<Home> {
                 SizedBox(
                   height: Dim().d12,
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: Dim().d12,
-                    ),
-                    Icon(
-                      Icons.circle,
-                      size: 10,
-                      color: Clr().primaryColor,
-                    ),
-                    SizedBox(
-                      width: Dim().d12,
-                    ),
-                    Expanded(
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'From',
-                                style: Sty().mediumText.copyWith(
-                                      color: Clr().textcolor,
-                                    ),
-                              ),
-                              SizedBox(
-                                height: Dim().d4,
-                              ),
-                              Text(
-                                '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: Sty()
-                                    .smallText
-                                    .copyWith(color: Clr().primaryColor),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        SvgPicture.asset("assets/cash.svg"),
-                        SizedBox(
-                          height: Dim().d12,
+                Padding(
+                  padding: EdgeInsets.only(left: Dim().d28),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'From',
+                                  style: Sty().mediumText.copyWith(
+                                        color: Clr().textcolor,
+                                      ),
+                                ),
+                                SizedBox(
+                                  height: Dim().d4,
+                                ),
+                                Text(
+                                  '${v['city']}',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Sty()
+                                      .smallText
+                                      .copyWith(color: Clr().primaryColor),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        Padding(
-                          padding: EdgeInsets.only(right: 10),
-                          child: Text(
-                            "View Map",
-                            style: Sty().smallText.copyWith(
-                                height: 1.2,
-                                color: Clr().primaryColor,
-                                fontWeight: FontWeight.w500,
-                                decoration: TextDecoration.underline,
-                                decorationColor: Clr().primaryColor),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          v['user']['type'] == 'Cash'
+                              ? SvgPicture.asset("assets/cash.svg")
+                              : SvgPicture.asset("assets/billing.svg"),
+                          SizedBox(
+                            height: Dim().d12,
                           ),
-                        )
-                      ],
-                    )
-                  ],
+                          InkWell(
+                            onTap: () {
+                              MapsLauncher.launchCoordinates(
+                                  double.parse(v['longitude']),
+                                  double.parse(v['latitude']));
+                            },
+                            child: Padding(
+                              padding: EdgeInsets.only(right: Dim().d8),
+                              child: Text(
+                                "View Map",
+                                style: Sty().smallText.copyWith(
+                                    height: 1.2,
+                                    color: Clr().primaryColor,
+                                    fontWeight: FontWeight.w500,
+                                    decoration: TextDecoration.underline,
+                                    decorationColor: Clr().primaryColor),
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                    ],
+                  ),
                 ),
                 SizedBox(
                   height: Dim().d12,
                 ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(
-                      width: Dim().d12,
+                Padding(
+                  padding: EdgeInsets.only(left: Dim().d12, top: Dim().d8),
+                  child: FixedTimeline.tileBuilder(
+                    mainAxisSize: MainAxisSize.min,
+                    verticalDirection: VerticalDirection.down,
+                    theme: TimelineThemeData(
+                      indicatorTheme:
+                          IndicatorThemeData(size: Dim().d8, position: 0),
+                      color: Clr().primaryColor,
+                      connectorTheme: ConnectorThemeData(
+                        color: Clr().primaryColor.withOpacity(0.4),
+                        thickness: 2.0,
+                        indent: 3.0,
+                      ),
+                      indicatorPosition: 0,
+                      nodePosition: 0,
                     ),
-                    Icon(
-                      Icons.circle,
-                      size: 10,
-                      color: Clr().green,
-                    ),
-                    SizedBox(
-                      width: Dim().d12,
-                    ),
-                    Expanded(
-                      child: Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Column(
+                    builder: TimelineTileBuilder.connectedFromStyle(
+                      connectorStyleBuilder: (context, index) {
+                        return ConnectorStyle.dashedLine;
+                      },
+                      indicatorStyleBuilder: (context, index) {
+                        return IndicatorStyle.dot;
+                      },
+                      contentsAlign: ContentsAlign.basic,
+                      oppositeContentsBuilder: (context, index) =>
+                          SizedBox.shrink(),
+                      lastConnectorStyle: ConnectorStyle.transparent,
+                      firstConnectorStyle: ConnectorStyle.transparent,
+                      contentsBuilder: (context, index) {
+                        return Padding(
+                          padding: EdgeInsets.only(
+                              left: Dim().d12, bottom: Dim().d12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                'To',
-                                style: Sty().mediumText.copyWith(
-                                      color: Clr().textcolor,
-                                      fontWeight: FontWeight.w600,
+                              Expanded(
+                                child: Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'To',
+                                          style: Sty().mediumText.copyWith(
+                                                color: Clr().textcolor,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        SizedBox(
+                                          height: Dim().d4,
+                                        ),
+                                        Text(
+                                          '${v['receiver_address'][index]['city']}',
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: Sty().smallText.copyWith(
+                                              color: Clr().primaryColor),
+                                        ),
+                                      ],
                                     ),
+                                  ],
+                                ),
                               ),
-                              SizedBox(
-                                height: Dim().d4,
-                              ),
-                              Text(
-                                '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: Sty()
-                                    .smallText
-                                    .copyWith(color: Clr().primaryColor),
-                              ),
+                              InkWell(
+                                onTap: () {
+                                  MapsLauncher.launchCoordinates(
+                                      double.parse(v['receiver_address'][index]
+                                          ['latitude']),
+                                      double.parse(v['receiver_address'][index]
+                                          ['longitude']));
+                                },
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.only(right: 10),
+                                      child: Text(
+                                        "View Map",
+                                        style: Sty().smallText.copyWith(
+                                            height: 1.2,
+                                            color: Clr().primaryColor,
+                                            fontWeight: FontWeight.w500,
+                                            decoration:
+                                                TextDecoration.underline,
+                                            decorationColor:
+                                                Clr().primaryColor),
+                                      ),
+                                    )
+                                  ],
+                                ),
+                              )
                             ],
                           ),
-                        ],
-                      ),
+                        );
+                      },
+                      itemCount: v['receiver_address'].length,
                     ),
-                    Column(
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(right: 10),
-                          child: Text(
-                            "View Map",
-                            style: Sty().smallText.copyWith(
-                                height: 1.2,
-                                color: Clr().primaryColor,
-                                fontWeight: FontWeight.w500,
-                                decoration: TextDecoration.underline,
-                                decorationColor: Clr().primaryColor),
-                          ),
-                        )
-                      ],
-                    )
-                  ],
+                  ),
                 ),
                 SizedBox(
                   height: Dim().d16,
@@ -765,7 +1033,7 @@ class _HomeState extends State<Home> {
                                 height: Dim().d4,
                               ),
                               Text(
-                                "04/10/2023",
+                                "${v['date']}",
                                 style: Sty().smallText.copyWith(
                                     color: Clr().primaryColor,
                                     fontWeight: FontWeight.w600),
@@ -789,7 +1057,7 @@ class _HomeState extends State<Home> {
                                 height: Dim().d4,
                               ),
                               Text(
-                                "04:00pm",
+                                "${v['time']}",
                                 style: Sty().smallText.copyWith(
                                     color: Clr().yellow,
                                     fontWeight: FontWeight.w600),
@@ -813,7 +1081,7 @@ class _HomeState extends State<Home> {
                                 height: Dim().d4,
                               ),
                               Text(
-                                "₹405(Est.)",
+                                "₹0(Est.)",
                                 style: Sty().smallText.copyWith(
                                     color: Clr().green,
                                     fontWeight: FontWeight.w600),
@@ -843,7 +1111,7 @@ class _HomeState extends State<Home> {
                         width: Dim().d12,
                       ),
                       Text(
-                        "Goods type",
+                        "Goods Type",
                         style: Sty().mediumText.copyWith(
                               color: Clr().primaryColor,
                               fontWeight: FontWeight.w600,
@@ -866,7 +1134,7 @@ class _HomeState extends State<Home> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: Dim().d12),
                   child: Text(
-                    'Electrical / Electronics / Home Appliances',
+                    '${v['goods_type']}',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: Sty().smallText.copyWith(color: Clr().primaryColor),
@@ -887,41 +1155,64 @@ class _HomeState extends State<Home> {
                       horizontal: Dim().d16,
                       vertical: Dim().d8,
                     ),
-                    child: Row(
+                    child: twincon == true ? Container() :  Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          '08:58',
-                          style: Sty().mediumText.copyWith(
-                              color: Clr().white, fontWeight: FontWeight.w600),
-                        ),
+                        TweenAnimationBuilder<Duration>(
+                            duration: Duration(minutes: minutes!, seconds: seconds!),
+                            tween: Tween(
+                                begin: Duration(minutes: minutes, seconds: seconds),
+                                end: Duration.zero),
+                            onEnd: () {
+                              setState(() {
+                                twincon = true;
+                              });
+                            },
+                            builder: (BuildContext context, Duration value,
+                                Widget? child) {
+                              final minutes = value.inMinutes;
+                              final seconds = value.inSeconds % 60;
+                              return Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 5),
+                                child: Text(
+                                  "0$minutes:$seconds",
+                                  textAlign: TextAlign.center,
+                                  style: Sty().smallText.copyWith(
+                                      color: Clr().secondary,
+                                      fontWeight: FontWeight.w600,
+                                      fontFamily: "MulshiSemi",
+                                      fontSize: Dim().d28),
+                                ),
+                              );
+                            }),
                         Wrap(
                           children: [
+                            // InkWell(
+                            //   onTap: () {
+                            //     _cancelDialog(ctx);
+                            //   },
+                            //   child: Container(
+                            //     height: 50,
+                            //     width: 50,
+                            //     decoration: BoxDecoration(
+                            //         borderRadius: BorderRadius.circular(55),
+                            //         color: Clr().white,
+                            //         border: Border.all(
+                            //           color: Clr().primaryColor,
+                            //         )),
+                            //     child: Padding(
+                            //       padding: EdgeInsets.all(Dim().d12),
+                            //       child: SvgPicture.asset("assets/cancel.svg"),
+                            //     ),
+                            //   ),
+                            // ),
+                            // SizedBox(
+                            //   width: Dim().d20,
+                            // ),
                             InkWell(
                               onTap: () {
-                                _cancelDialog(ctx);
-                              },
-                              child: Container(
-                                height: 50,
-                                width: 50,
-                                decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(55),
-                                    color: Clr().white,
-                                    border: Border.all(
-                                      color: Clr().primaryColor,
-                                    )),
-                                child: Padding(
-                                  padding: EdgeInsets.all(Dim().d12),
-                                  child: SvgPicture.asset("assets/cancel.svg"),
-                                ),
-                              ),
-                            ),
-                            SizedBox(
-                              width: Dim().d20,
-                            ),
-                            InkWell(
-                              onTap: () {
-                                _rideConfirmedDialog(ctx);
+                                _rideConfirmedDialog(ctx,v['id']);
                               },
                               child: Container(
                                 height: 50,
@@ -959,25 +1250,45 @@ class _HomeState extends State<Home> {
         SizedBox(
           height: Dim().d20,
         ),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: 12,
-          itemBuilder: (context, index) {
-            // var v = notificationList[index];
-            return CardLayout();
-          },
-          separatorBuilder: (context, index) {
-            return SizedBox(
-              height: Dim().d12,
-            );
-          },
-        ),
+        if (requestList.isEmpty) emptyLeadsLayout(),
+        if (requestList.isNotEmpty)
+          ListView.separated(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            itemCount: requestList.length,
+            itemBuilder: (context, index) {
+              // var v = notificationList[index];
+              return CardLayout(requestList[index], index,requestList);
+            },
+            separatorBuilder: (context, index) {
+              return SizedBox(
+                height: Dim().d12,
+              );
+            },
+          ),
       ],
     );
   }
 
-  _rideConfirmedDialog(ctx) {
+  emptyLeadsLayout() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        SizedBox(height: Dim().d12),
+        SvgPicture.asset("assets/notound.svg"),
+        SizedBox(height: Dim().d12),
+        Text(
+            "No leads to display as of now You will be notified when you will receive the leads",
+            textAlign: TextAlign.center,
+            style: Sty().mediumText.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontSize: Dim().d20,
+                )),
+      ],
+    );
+  }
+
+  _rideConfirmedDialog(ctx,id) {
     AwesomeDialog(
       isDense: false,
       context: ctx,
@@ -997,7 +1308,7 @@ class _HomeState extends State<Home> {
                     color: Clr().textcolor),
                 children: <TextSpan>[
                   TextSpan(
-                    text: '₹405',
+                    text: '₹0',
                     style: Sty().smallText.copyWith(
                           color: Clr().secondary,
                           fontSize: 20,
@@ -1059,15 +1370,7 @@ class _HomeState extends State<Home> {
                     height: 40,
                     child: ElevatedButton(
                         onPressed: () {
-                          // if (formKey.currentState!.validate()) {
-                          //   STM().checkInternet(context, widget).then((value) {
-                          //     if (value) {
-                          //       // sendOtp();
-                          STM().redirect2page(ctx, MyRides());
-                          //     }
-                          //   });
-                          // }
-                          // ;
+                          acceptRide(id);
                         },
                         style: ElevatedButton.styleFrom(
                             backgroundColor: Clr().primaryColor,
@@ -1553,15 +1856,17 @@ class _HomeState extends State<Home> {
       'uuid': OneSignal.User.pushSubscription.id,
     });
     var result =
-        await STM().postget(ctx, Str().loading, 'get_request', body, usertoken);
+        await STM().postWithoutDialog(ctx, 'get_request', body, usertoken);
     var success = result['success'];
     if (success) {
       setState(() {
         loading = true;
-        incomeData = result['total_income'];
-        ridesTodayData = result['rides_today'];
-        leadsTodayData = result['leads_today'];
-        requestList = result['data'];
+        incomeData = result['data']['total_income'];
+        ridesTodayData = result['data']['rides_today'];
+        leadsTodayData = result['data']['leads_today'];
+        requestList = result['data']['requests'];
+        pageUpdate = result['data']['update'];
+        walletBalance = result['data']['wallet_balance'];
       });
     } else {
       setState(() {
@@ -1574,4 +1879,162 @@ class _HomeState extends State<Home> {
               : DialogType.error);
     }
   }
+
+  ///location dialog
+  locationDialog() {
+    return AwesomeDialog(
+        context: context,
+        dialogType: DialogType.noHeader,
+        animType: AnimType.scale,
+        width: double.infinity,
+        dismissOnBackKeyPress: false,
+        dismissOnTouchOutside: false,
+        body: Padding(
+          padding: EdgeInsets.symmetric(horizontal: Dim().d12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Image.asset('assets/loc.png', fit: BoxFit.fitWidth),
+              Text('Location permission is required',
+                  style: Sty().mediumText.copyWith(
+                      color: Clr().primaryColor,
+                      fontSize: Dim().d16,
+                      fontWeight: FontWeight.w700)),
+              Text(
+                  'To enhance your experience and provide accurate address information, please grant permission to enable location services on your device.',
+                  textAlign: TextAlign.center,
+                  style: Sty().mediumText.copyWith(
+                      color: Clr().textcolor,
+                      fontSize: Dim().d14,
+                      fontWeight: FontWeight.w400)),
+              SizedBox(height: Dim().d20),
+              ElevatedButton(
+                  onPressed: () async {
+                    STM().back2Previous(ctx);
+                    getCurrentLct();
+                  },
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Clr().primaryColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(Dim().d16),
+                      )),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: Dim().d12),
+                    child: Center(
+                      child: Text('Continue',
+                          style: Sty().mediumText.copyWith(
+                              color: Clr().white,
+                              fontWeight: FontWeight.w500,
+                              fontSize: Dim().d16)),
+                    ),
+                  )),
+              SizedBox(height: Dim().d20),
+            ],
+          ),
+        )).show();
+  }
+
+  /// currentLocation
+  getCurrentLct() async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
+    LocationPermission permission = await Geolocator.requestPermission();
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse) {
+      Position? position = await Geolocator.getCurrentPosition();
+      // await initializeService();
+      locationApiTime();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      setState(() {
+        locationApiTimer!.cancel();
+      });
+      AwesomeDialog(
+          context: ctx,
+          width: double.infinity,
+          dialogType: DialogType.noHeader,
+          body: Padding(
+            padding: EdgeInsets.symmetric(horizontal: Dim().d12),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                    'Kindly grant location permission through your device settings.',
+                    style: Sty().mediumText.copyWith(
+                        color: Clr().primaryColor,
+                        fontWeight: FontWeight.w400)),
+                SizedBox(
+                  height: Dim().d12,
+                ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                          onPressed: () async {
+                            await Geolocator.openAppSettings().then((value) {
+                              setState(() {
+                                sp.clear();
+                                SystemNavigator.pop();
+                              });
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Clr().primaryColor,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(Dim().d8),
+                            child: Text(
+                              'Go Settings',
+                              style:
+                                  Sty().smallText.copyWith(color: Clr().white),
+                            ),
+                          )),
+                    ),
+                    SizedBox(
+                      width: Dim().d12,
+                    ),
+                    Expanded(
+                      child: ElevatedButton(
+                          onPressed: () async {
+                            setState(() {
+                              sp.clear();
+                              SystemNavigator.pop();
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Clr().primaryColor,
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.all(Dim().d8),
+                            child: Text(
+                              'Close App',
+                              style:
+                                  Sty().smallText.copyWith(color: Clr().white),
+                            ),
+                          )),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          )).show();
+    }
+  }
+
+
+  /// accept ride
+ void acceptRide(id) async {
+    FormData body = FormData.fromMap({
+      'request_id': id,
+    });
+    var result = await STM().postWithoutDialog(ctx, 'accept_ride', body, usertoken);
+    var success = result['success'];
+    if(success){
+      STM().successDialog(ctx, result['message'], MyRides(initialindex: 0));
+    }else{
+      STM().errorDialog(ctx, result['message']);
+    }
+ }
+
 }

@@ -1,8 +1,13 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:intl/intl.dart';
+import 'package:maps_launcher/maps_launcher.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'bottom_navigation/bottom_navigation.dart';
+import 'home.dart';
 import 'manage/static_method.dart';
 import 'loading_session.dart';
 import 'values/colors.dart';
@@ -10,6 +15,10 @@ import 'values/dimens.dart';
 import 'values/styles.dart';
 
 class MyRides extends StatefulWidget {
+  final initialindex;
+
+  const MyRides({super.key, this.initialindex});
+
   @override
   State<MyRides> createState() => _MyRidesState();
 }
@@ -26,6 +35,29 @@ class _MyRidesState extends State<MyRides> {
 
   List<dynamic> resultList = [];
   List<dynamic> completeList = [];
+  List<dynamic> upcomingList = [];
+  List<dynamic> ongingList = [];
+  List<dynamic> cancelledList = [];
+  List<dynamic> cancelreasonList = [];
+  var selectedCancelReason;
+
+  getSession() async {
+    SharedPreferences sp = await SharedPreferences.getInstance();
+    STM().checkInternet(context, widget).then((value) {
+      if (value) {
+        print('usertoken : ${usertoken}');
+        getrides();
+        cancelReason();
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    getSession();
+    // TODO: implement initState
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,13 +65,14 @@ class _MyRidesState extends State<MyRides> {
 
     return WillPopScope(
       onWillPop: () async {
-        STM().back2Previous(ctx);
+        STM().finishAffinity(ctx, Home());
         return false;
       },
       child: DefaultTabController(
         length: 4,
+        initialIndex: widget.initialindex ?? 0,
         child: Scaffold(
-          bottomNavigationBar: bottomBarLayout(ctx, 2),
+            bottomNavigationBar: bottomBarLayout(ctx, 2),
             backgroundColor: Clr().white,
             appBar: AppBar(
               elevation: 0,
@@ -47,7 +80,7 @@ class _MyRidesState extends State<MyRides> {
               leadingWidth: 52,
               leading: InkWell(
                   onTap: () {
-                    STM().back2Previous(ctx);
+                    STM().finishAffinity(ctx, Home());
                   },
                   child: Padding(
                     padding: const EdgeInsets.all(10),
@@ -99,74 +132,36 @@ class _MyRidesState extends State<MyRides> {
             ),
             body: TabBarView(
               children: [
-                ListView.separated(
-                  padding: EdgeInsets.all(Dim().d8),
-                  physics: const BouncingScrollPhysics(),
-                  shrinkWrap: true,
-                  scrollDirection: Axis.vertical,
-                  itemCount: 2,
-                  itemBuilder: (context, index) {
-                    return upcomingLayout(ctx, index, resultList);
-                  },
-                  separatorBuilder: (context, index) {
-                    return SizedBox(
-                      height: Dim().d20,
-                    );
-                  },
-                ),
-                ListView.separated(
-                  padding: EdgeInsets.all(Dim().d8),
-                  physics: const BouncingScrollPhysics(),
-                  shrinkWrap: true,
-                  scrollDirection: Axis.vertical,
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    return onGoingLayout(ctx, index, resultList);
-                  },
-                  separatorBuilder: (context, index) {
-                    return SizedBox(
-                      height: Dim().d20,
-                    );
-                  },
-                ),
-                ListView.separated(
-                  padding: EdgeInsets.all(Dim().d8),
-                  physics: const BouncingScrollPhysics(),
-                  shrinkWrap: true,
-                  scrollDirection: Axis.vertical,
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    return completeLayout(ctx, index, resultList);
-                  },
-                  separatorBuilder: (context, index) {
-                    return SizedBox(
-                      height: Dim().d20,
-                    );
-                  },
-                ),
-                ListView.separated(
-                  padding: EdgeInsets.all(Dim().d8),
-                  physics: const BouncingScrollPhysics(),
-                  shrinkWrap: true,
-                  scrollDirection: Axis.vertical,
-                  itemCount: 12,
-                  itemBuilder: (context, index) {
-                    return cancelLayout(ctx, index, resultList);
-                  },
-                  separatorBuilder: (context, index) {
-                    return SizedBox(
-                      height: Dim().d20,
-                    );
-                  },
-                ),
+                listLayout(upcomingList),
+                listLayout(ongingList),
+                listLayout(completeList),
+                listLayout(cancelledList),
               ],
             )),
       ),
     );
   }
 
+  Widget listLayout(list) {
+    return ListView.separated(
+        itemBuilder: (context, index) {
+          return Padding(
+              padding: EdgeInsets.only(top: Dim().d12),
+              child: cardLayout(
+                context,
+                index,
+                list,
+              ));
+        },
+        separatorBuilder: (context, index) {
+          return SizedBox(height: Dim().d12);
+        },
+        itemCount: list.length,
+        padding: EdgeInsets.symmetric(horizontal: Dim().d12));
+  }
+
   /// Upcoming request Layout
-  Widget upcomingLayout(ctx, index, list) {
+  Widget cardLayout(ctx, index, list) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -197,14 +192,14 @@ class _MyRidesState extends State<MyRides> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Trip ID : 2135563',
-                    style: Sty().microText.copyWith(
-                        color: Clr().grey2
-                    ),),
-                  Text('14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(
-                        color: Color(0xff939393)
-                    ),),
+                  Text(
+                    'Trip ID : ${list[index]['trip_id']}',
+                    style: Sty().microText.copyWith(color: Clr().grey2),
+                  ),
+                  Text(
+                    '${DateFormat('dd/MM/yyyy | h:mm a').format(DateTime.parse(list[index]['updated_at'].toString()))}',
+                    style: Sty().microText.copyWith(color: Color(0xff939393)),
+                  ),
                 ],
               ),
             ),
@@ -220,119 +215,153 @@ class _MyRidesState extends State<MyRides> {
                   Text(
                     'From',
                     style: Sty().smallText.copyWith(
-                      color: Clr().primaryColor,
-                    ),
+                          color: Clr().primaryColor,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
                   Text(
-                    '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
+                    '${list[index]['city'].toString()}',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-
-                  SizedBox(height: Dim().d8,),
-                  Text(
-                    'To',
-                    style: Sty().smallText.copyWith(
-                      color: Clr().red,
-                    ),
+                  SizedBox(
+                    height: Dim().d8,
                   ),
-
+                  ListView.builder(
+                    itemCount: list[index]['receiver_address'].length,
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemBuilder: (context, index2) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'To',
+                            style: Sty().smallText.copyWith(
+                                  color: Clr().red,
+                                ),
+                          ),
+                          SizedBox(
+                            height: Dim().d4,
+                          ),
+                          Text(
+                            '${list[index]['receiver_address'][index2]['city']} ${list[index]['receiver_address'][index2]['pincode']}',
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: Sty()
+                                .microText
+                                .copyWith(color: Color(0xff7a7a7a)),
+                          ),
+                          SizedBox(
+                            height: Dim().d8,
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                   SizedBox(
                     height: Dim().d4,
                   ),
-                  Text(
-                    '1901 Thornridge Cir. Shiloh, Hawaii 81063',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
-                  ),
-                  SizedBox(height: Dim().d4,),
                   Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Goods type',
+                        child: Text(
+                          'Goods type',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Building / Construction',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '${list[index]['goods_type']}',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Date & Time',
+                        child: Text(
+                          'Date & Time',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Dec 18, 2023|12:30Pm',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '${list[index]['date']}|${list[index]['time']}',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Est. Fare',
+                        child: Text(
+                          'Est. Fare',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('₹500',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '₹0',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  Text('Pick up contact :',
+                  Text(
+                    'Pick up contact :',
                     style: Sty().mediumText.copyWith(
-                      color: Color(0xff7a7a7a),
-                    ),),
-                  SizedBox(height: Dim().d8,),
-
+                          color: Color(0xff7a7a7a),
+                        ),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Aniket Mahakal',
-                        style: Sty().mediumText.copyWith(
-                            color: Clr().primaryColor
-                        ),),
+                      Text(
+                        '${list[index]['pickup_name']}',
+                        style: Sty()
+                            .mediumText
+                            .copyWith(color: Clr().primaryColor),
+                      ),
                       Wrap(
                         children: [
                           SizedBox(
@@ -340,14 +369,8 @@ class _MyRidesState extends State<MyRides> {
                             width: 90,
                             child: ElevatedButton(
                                 onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
+                                  STM().openDialer(
+                                      '${list[index]['pickup_mobile']}');
                                 },
                                 style: ElevatedButton.styleFrom(
                                     backgroundColor: Color(0xff07CB55),
@@ -368,34 +391,35 @@ class _MyRidesState extends State<MyRides> {
                                     Text(
                                       'Call',
                                       style: Sty().mediumText.copyWith(
-                                        fontSize: 14,
-                                        color: Clr().white,
-                                        fontWeight: FontWeight.w400,
-                                      ),
+                                            fontSize: 14,
+                                            color: Clr().white,
+                                            fontWeight: FontWeight.w400,
+                                          ),
                                     ),
                                   ],
                                 )),
                           ),
-                          SizedBox(width: Dim().d8,),
+                          SizedBox(
+                            width: Dim().d8,
+                          ),
                           SizedBox(
                             height: 35,
                             width: 50,
                             child: ElevatedButton(
                                 onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
+                                  MapsLauncher.launchCoordinates(
+                                      double.parse(
+                                          list[index]['latitude'].toString()),
+                                      double.parse(
+                                          list[index]['longitude'].toString()));
                                 },
                                 style: ElevatedButton.styleFrom(
                                     backgroundColor: Clr().white,
                                     elevation: 0.5,
                                     shape: RoundedRectangleBorder(
-                                      side: BorderSide(color: Color(0xff7a7a7a).withOpacity(0.5),
+                                      side: BorderSide(
+                                        color:
+                                            Color(0xff7a7a7a).withOpacity(0.5),
                                       ),
                                       borderRadius: BorderRadius.circular(50),
                                     )),
@@ -405,9 +429,13 @@ class _MyRidesState extends State<MyRides> {
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  SizedBox(height: Dim().d12,),
+                  SizedBox(
+                    height: Dim().d12,
+                  ),
                   Row(
                     children: [
                       Expanded(
@@ -415,7 +443,7 @@ class _MyRidesState extends State<MyRides> {
                           height: 40,
                           child: ElevatedButton(
                               onPressed: () {
-                                Navigator.pop(ctx);
+                                _cancelDailog(ctx);
                               },
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Clr().white,
@@ -427,10 +455,10 @@ class _MyRidesState extends State<MyRides> {
                               child: Text(
                                 'Cancel Ride',
                                 style: Sty().mediumText.copyWith(
-                                  fontSize: 16,
-                                  color: Clr().red,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                      fontSize: 16,
+                                      color: Clr().red,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               )),
                         ),
                       ),
@@ -461,27 +489,28 @@ class _MyRidesState extends State<MyRides> {
                               child: Text(
                                 'Start Ride',
                                 style: Sty().mediumText.copyWith(
-                                  fontSize: 16,
-                                  color: Clr().white,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                      fontSize: 16,
+                                      color: Clr().white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               )),
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d20,)
+                  SizedBox(
+                    height: Dim().d20,
+                  )
                 ],
               ),
             ),
-
           ],
         ),
       ),
     );
   }
 
-///On going Layout
+  ///On going Layout
   Widget onGoingLayout(ctx, index, list) {
     return Container(
       decoration: BoxDecoration(
@@ -513,14 +542,14 @@ class _MyRidesState extends State<MyRides> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Trip ID : 2135563',
-                    style: Sty().microText.copyWith(
-                        color: Clr().grey2
-                    ),),
-                  Text('14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(
-                        color: Color(0xff939393)
-                    ),),
+                  Text(
+                    'Trip ID : 2135563',
+                    style: Sty().microText.copyWith(color: Clr().grey2),
+                  ),
+                  Text(
+                    '14/10/2023 | 12:30Pm',
+                    style: Sty().microText.copyWith(color: Color(0xff939393)),
+                  ),
                 ],
               ),
             ),
@@ -536,10 +565,9 @@ class _MyRidesState extends State<MyRides> {
                   Text(
                     'From',
                     style: Sty().smallText.copyWith(
-                      color: Clr().primaryColor,
-                    ),
+                          color: Clr().primaryColor,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -547,19 +575,17 @@ class _MyRidesState extends State<MyRides> {
                     '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Text(
                     'To',
                     style: Sty().smallText.copyWith(
-                      color: Clr().red,
-                    ),
+                          color: Clr().red,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -567,87 +593,108 @@ class _MyRidesState extends State<MyRides> {
                     '1901 Thornridge Cir. Shiloh, Hawaii 81063',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Goods type',
+                        child: Text(
+                          'Goods type',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Building / Construction',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Building / Construction',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Date & Time',
+                        child: Text(
+                          'Date & Time',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Dec 18, 2023|12:30Pm',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Dec 18, 2023|12:30Pm',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Est. Fare',
+                        child: Text(
+                          'Est. Fare',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('₹500',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '₹500',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  Text('Pick up contact :',
+                  Text(
+                    'Pick up contact :',
                     style: Sty().mediumText.copyWith(
-                      color: Color(0xff7a7a7a),
-                    ),),
-                  SizedBox(height: Dim().d8,),
+                          color: Color(0xff7a7a7a),
+                        ),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Aniket Mahakal',
-                        style: Sty().mediumText.copyWith(
-                            color: Clr().primaryColor
-                        ),),
+                      Text(
+                        'Aniket Mahakal',
+                        style: Sty()
+                            .mediumText
+                            .copyWith(color: Clr().primaryColor),
+                      ),
                       Wrap(
                         children: [
                           SizedBox(
@@ -683,15 +730,17 @@ class _MyRidesState extends State<MyRides> {
                                     Text(
                                       'Call',
                                       style: Sty().mediumText.copyWith(
-                                        fontSize: 14,
-                                        color: Clr().white,
-                                        fontWeight: FontWeight.w400,
-                                      ),
+                                            fontSize: 14,
+                                            color: Clr().white,
+                                            fontWeight: FontWeight.w400,
+                                          ),
                                     ),
                                   ],
                                 )),
                           ),
-                          SizedBox(width: Dim().d8,),
+                          SizedBox(
+                            width: Dim().d8,
+                          ),
                           SizedBox(
                             height: 35,
                             width: 50,
@@ -710,7 +759,9 @@ class _MyRidesState extends State<MyRides> {
                                     backgroundColor: Clr().white,
                                     elevation: 0.5,
                                     shape: RoundedRectangleBorder(
-                                      side: BorderSide(color: Color(0xff7a7a7a).withOpacity(0.5),
+                                      side: BorderSide(
+                                        color:
+                                            Color(0xff7a7a7a).withOpacity(0.5),
                                       ),
                                       borderRadius: BorderRadius.circular(50),
                                     )),
@@ -720,20 +771,28 @@ class _MyRidesState extends State<MyRides> {
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  Text('Receiver contact :',
+                  Text(
+                    'Receiver contact :',
                     style: Sty().mediumText.copyWith(
-                      color: Color(0xff7a7a7a),
-                    ),),
-                  SizedBox(height: Dim().d8,),
+                          color: Color(0xff7a7a7a),
+                        ),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Darshan Jadhav',
-                        style: Sty().mediumText.copyWith(
-                            color: Clr().primaryColor
-                        ),),
+                      Text(
+                        'Darshan Jadhav',
+                        style: Sty()
+                            .mediumText
+                            .copyWith(color: Clr().primaryColor),
+                      ),
                       Wrap(
                         children: [
                           SizedBox(
@@ -769,15 +828,17 @@ class _MyRidesState extends State<MyRides> {
                                     Text(
                                       'Call',
                                       style: Sty().mediumText.copyWith(
-                                        fontSize: 14,
-                                        color: Clr().white,
-                                        fontWeight: FontWeight.w400,
-                                      ),
+                                            fontSize: 14,
+                                            color: Clr().white,
+                                            fontWeight: FontWeight.w400,
+                                          ),
                                     ),
                                   ],
                                 )),
                           ),
-                          SizedBox(width: Dim().d8,),
+                          SizedBox(
+                            width: Dim().d8,
+                          ),
                           SizedBox(
                             height: 35,
                             width: 50,
@@ -796,7 +857,9 @@ class _MyRidesState extends State<MyRides> {
                                     backgroundColor: Clr().white,
                                     elevation: 0.5,
                                     shape: RoundedRectangleBorder(
-                                      side: BorderSide(color: Color(0xff7a7a7a).withOpacity(0.5),
+                                      side: BorderSide(
+                                        color:
+                                            Color(0xff7a7a7a).withOpacity(0.5),
                                       ),
                                       borderRadius: BorderRadius.circular(50),
                                     )),
@@ -806,10 +869,13 @@ class _MyRidesState extends State<MyRides> {
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
-
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  SizedBox(height: Dim().d12,),
+                  SizedBox(
+                    height: Dim().d12,
+                  ),
                   Center(
                     child: SizedBox(
                       height: 40,
@@ -835,18 +901,19 @@ class _MyRidesState extends State<MyRides> {
                           child: Text(
                             'Load Session',
                             style: Sty().mediumText.copyWith(
-                              fontSize: 16,
-                              color: Clr().white,
-                              fontWeight: FontWeight.w600,
-                            ),
+                                  fontSize: 16,
+                                  color: Clr().white,
+                                  fontWeight: FontWeight.w600,
+                                ),
                           )),
                     ),
                   ),
-                  SizedBox(height: Dim().d20,)
+                  SizedBox(
+                    height: Dim().d20,
+                  )
                 ],
               ),
             ),
-
           ],
         ),
       ),
@@ -854,7 +921,7 @@ class _MyRidesState extends State<MyRides> {
   }
 
   /// Completed Layout
-  Widget completeLayout(ctx, index, list){
+  Widget completeLayout(ctx, index, list) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -885,14 +952,14 @@ class _MyRidesState extends State<MyRides> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Trip ID : 2135563',
-                    style: Sty().microText.copyWith(
-                        color: Clr().grey2
-                    ),),
-                  Text('14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(
-                        color: Color(0xff939393)
-                    ),),
+                  Text(
+                    'Trip ID : 2135563',
+                    style: Sty().microText.copyWith(color: Clr().grey2),
+                  ),
+                  Text(
+                    '14/10/2023 | 12:30Pm',
+                    style: Sty().microText.copyWith(color: Color(0xff939393)),
+                  ),
                 ],
               ),
             ),
@@ -908,10 +975,9 @@ class _MyRidesState extends State<MyRides> {
                   Text(
                     'From',
                     style: Sty().smallText.copyWith(
-                      color: Clr().primaryColor,
-                    ),
+                          color: Clr().primaryColor,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -919,19 +985,17 @@ class _MyRidesState extends State<MyRides> {
                     '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Text(
                     'To',
                     style: Sty().smallText.copyWith(
-                      color: Clr().red,
-                    ),
+                          color: Clr().red,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -939,94 +1003,116 @@ class _MyRidesState extends State<MyRides> {
                     '1901 Thornridge Cir. Shiloh, Hawaii 81063',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Goods type',
+                        child: Text(
+                          'Goods type',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Building / Construction',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Building / Construction',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Date & Time',
+                        child: Text(
+                          'Date & Time',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Dec 18, 2023|12:30Pm',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Dec 18, 2023|12:30Pm',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Est. Fare',
+                        child: Text(
+                          'Est. Fare',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('₹500',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '₹500',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  Text('Pick up contact :',
+                  Text(
+                    'Pick up contact :',
                     style: Sty().mediumText.copyWith(
-                      color: Color(0xff7a7a7a),
-                    ),),
-                  SizedBox(height: Dim().d8,),
-                  Text('Aniket Mahakal',
-                    style: Sty().mediumText.copyWith(
-                        color: Clr().primaryColor
-                    ),),
-                  SizedBox(height: Dim().d8,),
-                  Text('+91 25896 32145',
-                    style: Sty().smallText.copyWith(
-                        color: Clr().textcolor
-                    ),),
-                  SizedBox(height: Dim().d20,)
+                          color: Color(0xff7a7a7a),
+                        ),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
+                  Text(
+                    'Aniket Mahakal',
+                    style: Sty().mediumText.copyWith(color: Clr().primaryColor),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
+                  Text(
+                    '+91 25896 32145',
+                    style: Sty().smallText.copyWith(color: Clr().textcolor),
+                  ),
+                  SizedBox(
+                    height: Dim().d20,
+                  )
                 ],
               ),
             ),
-
           ],
         ),
       ),
@@ -1065,14 +1151,14 @@ class _MyRidesState extends State<MyRides> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Trip ID : 2135563',
-                    style: Sty().microText.copyWith(
-                        color: Clr().grey2
-                    ),),
-                  Text('14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(
-                        color: Color(0xff939393)
-                    ),),
+                  Text(
+                    'Trip ID : 2135563',
+                    style: Sty().microText.copyWith(color: Clr().grey2),
+                  ),
+                  Text(
+                    '14/10/2023 | 12:30Pm',
+                    style: Sty().microText.copyWith(color: Color(0xff939393)),
+                  ),
                 ],
               ),
             ),
@@ -1088,10 +1174,9 @@ class _MyRidesState extends State<MyRides> {
                   Text(
                     'From',
                     style: Sty().smallText.copyWith(
-                      color: Clr().primaryColor,
-                    ),
+                          color: Clr().primaryColor,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -1099,19 +1184,17 @@ class _MyRidesState extends State<MyRides> {
                     '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Text(
                     'To',
                     style: Sty().smallText.copyWith(
-                      color: Clr().red,
-                    ),
+                          color: Clr().red,
+                        ),
                   ),
-
                   SizedBox(
                     height: Dim().d4,
                   ),
@@ -1119,95 +1202,112 @@ class _MyRidesState extends State<MyRides> {
                     '1901 Thornridge Cir. Shiloh, Hawaii 81063',
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: Sty()
-                        .microText
-                        .copyWith(color: Color(0xff7a7a7a)),
+                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Goods type',
+                        child: Text(
+                          'Goods type',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Building / Construction',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Building / Construction',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Date & Time',
+                        child: Text(
+                          'Date & Time',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('Dec 18, 2023|12:30Pm',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          'Dec 18, 2023|12:30Pm',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d8,),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         flex: 2,
-                        child: Text('Est. Fare',
+                        child: Text(
+                          'Est. Fare',
                           style: Sty().smallText.copyWith(
-                            color: Color(0xff7a7a7a),
-                          ),),
+                                color: Color(0xff7a7a7a),
+                              ),
+                        ),
                       ),
                       Expanded(
                         flex: 2,
-                        child: Text('₹500',
-                          style: Sty().smallText.copyWith(
-                              color: Clr().textcolor
-                          ),),
+                        child: Text(
+                          '₹500',
+                          style:
+                              Sty().smallText.copyWith(color: Clr().textcolor),
+                        ),
                       ),
                     ],
                   ),
-                  SizedBox(height: Dim().d4,),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
                   Divider(),
-                  Text('Cancelation Reason:',
-                    style: Sty().mediumText.copyWith(
-                        color: Clr().primaryColor
-                    ),),
-                  SizedBox(height: Dim().d8,),
-                  Text('Expected a shorter wait time',
-                    style: Sty().smallText.copyWith(
-                        color: Clr().textcolor
-                    ),),
-                  SizedBox(height: Dim().d20,)
+                  Text(
+                    'Cancelation Reason:',
+                    style: Sty().mediumText.copyWith(color: Clr().primaryColor),
+                  ),
+                  SizedBox(
+                    height: Dim().d8,
+                  ),
+                  Text(
+                    'Expected a shorter wait time',
+                    style: Sty().smallText.copyWith(color: Clr().textcolor),
+                  ),
+                  SizedBox(
+                    height: Dim().d20,
+                  )
                 ],
               ),
             ),
-
           ],
         ),
       ),
     );
   }
-
 
   _enterOTPDialog(ctx) {
     AwesomeDialog(
@@ -1222,10 +1322,10 @@ class _MyRidesState extends State<MyRides> {
             Text(
               'Enter OTP',
               style: Sty().mediumText.copyWith(
-                color: Clr().textcolor,
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-              ),
+                    color: Clr().textcolor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
             ),
             SizedBox(
               height: Dim().d8,
@@ -1234,10 +1334,10 @@ class _MyRidesState extends State<MyRides> {
               'OTP has been sent to Customer.enter the OTP to start ride.',
               textAlign: TextAlign.center,
               style: Sty().mediumText.copyWith(
-                color: Clr().textGrey,
-                fontWeight: FontWeight.w400,
-                fontSize: 16,
-              ),
+                    color: Clr().textGrey,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 16,
+                  ),
             ),
             SizedBox(
               height: Dim().d20,
@@ -1312,18 +1412,107 @@ class _MyRidesState extends State<MyRides> {
                   child: Text(
                     'Start Rides',
                     style: Sty().mediumText.copyWith(
-                      fontSize: 16,
-                      color: Clr().white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                          fontSize: 16,
+                          color: Clr().white,
+                          fontWeight: FontWeight.w600,
+                        ),
                   )),
             ),
             SizedBox(
-              height: Dim().d28 ,
+              height: Dim().d28,
             ),
           ],
         ),
       ),
     ).show();
+  }
+
+  _cancelDailog(ctx) {
+    return AwesomeDialog(
+        context: ctx,
+        dialogType: DialogType.noHeader,
+        animType: AnimType.scale,
+        body: StatefulBuilder(
+          builder: (context, setState) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('Cancellation Reason',
+                        style: Sty().mediumText.copyWith(
+                            color: Clr().textcolor,
+                            fontSize: Dim().d20,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                SizedBox(height: Dim().d20),
+                ListView.builder(
+                  padding: EdgeInsets.zero,
+                  itemCount: cancelreasonList.length,
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: EdgeInsets.only(bottom: Dim().d12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: Dim().d8,
+                          ),
+                          InkWell(
+                              onTap: () {
+                                setState(() {
+                                  selectedCancelReason =
+                                      cancelreasonList[index]['id'];
+                                });
+                              },
+                              child: selectedCancelReason ==
+                                      cancelreasonList[index]['id']
+                                  ? Icon(Icons.circle, size: Dim().d16)
+                                  : Icon(Icons.circle_outlined,
+                                      size: Dim().d16)),
+                          SizedBox(
+                            width: Dim().d12,
+                          ),
+                          Text('${cancelreasonList[index]['reason']}',
+                              style: Sty().mediumText),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        )).show();
+  }
+
+  void getrides() async {
+    var result = await STM().getWithoutDialog(ctx, 'get_ride', usertoken);
+    var success = result['success'];
+    if (success) {
+      setState(() {
+        upcomingList = result['data']['upcoming'];
+        ongingList = result['data']['ongoing'];
+        completeList = result['data']['completed'];
+        cancelledList = result['data']['cancelled'];
+      });
+    } else {
+      STM().errorDialog(ctx, result['message']);
+    }
+  }
+
+  void cancelReason() async {
+    var result = await STM().getWithoutDialog(ctx, 'cancel_reasons', usertoken);
+    var success = result['success'];
+    if (success) {
+      setState(() {
+        cancelreasonList = result['data'];
+      });
+    } else {
+      STM().errorDialog(ctx, result['message']);
+    }
   }
 }

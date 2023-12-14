@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:oneclick_driver/upload_documents.dart';
 import 'package:oneclick_driver/vehicle_details.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'home.dart';
 import 'login.dart';
@@ -24,18 +25,6 @@ Future<void> main() async {
   bool typeRegis = sp.getBool('register') ?? false;
   bool kyc = sp.getBool('kyc') ?? false;
   bool vehicle = sp.getBool('vehicledetails') ?? false;
-
-  ///Code for notifications
-  // OneSignal.shared.setAppId('cae3483f-464a-4ef9-b9e1-a772c3968ba9');
-  // GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-  // OneSignal.shared.setNotificationOpenedHandler((value) {
-  //   navigatorKey.currentState!.push(
-  //     MaterialPageRoute(
-  //       builder: (context) => NotificationPage(),
-  //     ),
-  //   );
-  // });
-  ///End Code for notifications
 
   await Future.delayed(const Duration(seconds: 3));
   runApp(
