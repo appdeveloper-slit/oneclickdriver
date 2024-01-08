@@ -119,10 +119,17 @@ class _OTPState extends State<OTP> {
                       color: Clr().textcolor),
                   children: <TextSpan>[
                     TextSpan(
-                      text: '+91 ${widget.sMobile}',
+                      text: '+91 ${widget.sMobile} ',
                       style: Sty().smallText.copyWith(
                           color: Clr().secondary,
                           fontWeight: FontWeight.w700,
+                          fontSize: 14),
+                    ),
+                    TextSpan(
+                      text: 'for verification',
+                      style: Sty().smallText.copyWith(
+                          color: Clr().textcolor,
+                          fontWeight: FontWeight.w400,
                           fontSize: 14),
                     ),
                   ],

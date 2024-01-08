@@ -31,6 +31,7 @@ class Str {
   String invalidPin = "Please select date";
 
   String sendingOtp = "Sending OTP …";
+  String cancelling = "Cancelling …";
   String verifying = "Verifying …";
   String uploading = "Uploading …";
   String loading = "Loading …";

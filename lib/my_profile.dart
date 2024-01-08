@@ -34,6 +34,14 @@ class _MyProfileState extends State<MyProfile> {
   TextEditingController emailCtrl = TextEditingController();
   TextEditingController updatenumberCtrl = TextEditingController();
   TextEditingController updateUserOtpController = TextEditingController();
+  TextEditingController modelCtrl = TextEditingController();
+  TextEditingController vehicleCtrl = TextEditingController();
+  TextEditingController licenseCtrl = TextEditingController();
+  TextEditingController rcCtrl = TextEditingController();
+  TextEditingController bankNamneCtrl = TextEditingController();
+  TextEditingController accountNumCtrl = TextEditingController();
+  TextEditingController ifscCtrl = TextEditingController();
+  TextEditingController acctHolderNameCtrl = TextEditingController();
   bool again = false;
 
   getSession() async {
@@ -148,7 +156,7 @@ class _MyProfileState extends State<MyProfile> {
                                                       .getInstance();
                                               sp.setBool('login', false);
                                               sp.clear();
-                                              locationApiTimer!.cancel();
+                                              locationApiTimer.cancel();
                                               STM()
                                                   .finishAffinity(ctx, Login());
                                             });
@@ -400,7 +408,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: modelCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           readOnly: true,
@@ -415,7 +423,7 @@ class _MyProfileState extends State<MyProfile> {
                                                         ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
-                                                hintText: "Van",
+                                                hintText: "Car Model",
                                                 counterText: "",
                                               ),
                                           validator: (value) {
@@ -447,7 +455,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: vehicleCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -461,7 +469,7 @@ class _MyProfileState extends State<MyProfile> {
                                                         ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
-                                                hintText: "MH05FF8968",
+                                                hintText: "Vehicle Number",
                                                 counterText: "",
                                               ),
                                           validator: (value) {
@@ -493,7 +501,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: licenseCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -507,7 +515,7 @@ class _MyProfileState extends State<MyProfile> {
                                                         ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
-                                                hintText: "MH05FF8968",
+                                                hintText: "License Number",
                                                 counterText: "",
                                               ),
                                           validator: (value) {
@@ -536,7 +544,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: rcCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -550,7 +558,7 @@ class _MyProfileState extends State<MyProfile> {
                                                         ),
                                                 filled: true,
                                                 fillColor: Clr().grey,
-                                                hintText: "MH05FF8968",
+                                                hintText: "Rc Number",
                                                 counterText: "",
                                               ),
                                           validator: (value) {
@@ -628,7 +636,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: bankNamneCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           readOnly: true,
@@ -675,7 +683,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: accountNumCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -721,7 +729,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: ifscCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -764,7 +772,7 @@ class _MyProfileState extends State<MyProfile> {
                                           height: Dim().d8,
                                         ),
                                         TextFormField(
-                                          // controller: aadharCtrl,
+                                          controller: acctHolderNameCtrl,
                                           cursorColor: Clr().textcolor,
                                           style: Sty().mediumText,
                                           keyboardType: TextInputType.number,
@@ -1237,6 +1245,14 @@ class _MyProfileState extends State<MyProfile> {
                 TextEditingController(text: details['email'].toString());
             mobileCtrl =
                 TextEditingController(text: details['mobile'].toString());
+            modelCtrl = TextEditingController(text: details['vehicle_detail']['vehicle']['name'].toString());
+            vehicleCtrl = TextEditingController(text: details['vehicle_detail']['vehicle_number'].toString());
+            licenseCtrl = TextEditingController(text: details['vehicle_detail']['license_number'].toString());
+            rcCtrl = TextEditingController(text: details['vehicle_detail']['rc_number'].toString());
+            bankNamneCtrl = TextEditingController(text: details['vehicle_detail']['bank_name'].toString());
+            accountNumCtrl = TextEditingController(text: details['vehicle_detail']['account_number'].toString());
+            ifscCtrl = TextEditingController(text: details['vehicle_detail']['ifsc_code'].toString());
+            acctHolderNameCtrl = TextEditingController(text: details['vehicle_detail']['account_holder_name'].toString());
           });
         } else {
           setState(() {

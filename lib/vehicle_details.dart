@@ -245,6 +245,7 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 SizedBox(
                   height: Dim().d4,
                 ),
+                if(vehicleDetails != null)
                 imageLayout(
                     fileimage: sVehiclePhotoFile,
                     urlimage: vehicleDetails['vehicle_detail'] == null
@@ -327,6 +328,7 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 SizedBox(
                   height: Dim().d4,
                 ),
+                if(vehicleDetails != null)
                 imageLayout(
                     fileimage: sLicensePhotoFile,
                     urlimage: vehicleDetails['vehicle_detail'] == null
@@ -406,6 +408,7 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 SizedBox(
                   height: Dim().d4,
                 ),
+                if(vehicleDetails != null)
                 imageLayout(
                     fileimage: sRcPhotoFile,
                     urlimage: vehicleDetails['vehicle_detail'] == null
@@ -587,6 +590,7 @@ class _VehicleDetailsState extends State<VehicleDetails> {
                 SizedBox(
                   height: Dim().d4,
                 ),
+                if(vehicleDetails != null)
                 imageLayout(
                     fileimage: sCanChequePhotoFile,
                     urlimage: vehicleDetails['vehicle_detail'] == null

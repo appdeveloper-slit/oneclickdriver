@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_background_service_android/flutter_background_service_android.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -30,17 +30,25 @@ import 'manage/static_method.dart';
 import 'map.dart';
 import 'my_rides.dart';
 import 'notification.dart';
+import 'tweenpag.dart';
 import 'values/strings.dart';
 import 'values/styles.dart';
 import 'package:double_back_to_close/double_back_to_close.dart';
 
 var curtLng, curtLat, usertoken, city;
+List<dynamic> requestList = [];
 final service = FlutterBackgroundService();
 bool? checkRun;
-Timer homeApiTimer = Timer(Duration(seconds: 1),() {
+Timer homeApiTimer = Timer(
+  Duration(seconds: 1),
+  () {},
+);
 
-},);
-Timer? locationApiTimer;
+Timer locationApiTimer = Timer(
+  Duration(seconds: 1),
+  () {},
+);
+
 
 checkAppPermission() async {
   SharedPreferences sp = await SharedPreferences.getInstance();
@@ -59,60 +67,60 @@ checkAppPermission() async {
         "update_location", body, sp.getString('token'));
     print('api run');
   } else {
-    locationApiTimer!.cancel();
+    locationApiTimer.cancel();
   }
 }
 
-Future<void> initializeService() async {
-  final service = FlutterBackgroundService();
-
-  /// OPTIONAL, using custom notification channel id
-  AndroidNotificationChannel channel = AndroidNotificationChannel(
-    'OneClickDriver', // id
-    'One Click Driver Current Location Fetching', // title
-    // description: 'Current Location: $city', // description
-    importance: Importance.low, // importance must be at low or higher level
-  );
-
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  if (Platform.isIOS || Platform.isAndroid) {
-    await flutterLocalNotificationsPlugin.initialize(
-      const InitializationSettings(
-        iOS: DarwinInitializationSettings(),
-        android: AndroidInitializationSettings('ic_bg_service_small'),
-      ),
-    );
-  }
-
-  await flutterLocalNotificationsPlugin
-      .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
-      ?.createNotificationChannel(channel);
-
-  await service.configure(
-    androidConfiguration: AndroidConfiguration(
-      // this will be executed when app is in foreground or background in separated isolate
-      onStart: onStart,
-      // auto start service
-      autoStart: true,
-      isForegroundMode: true,
-      notificationChannelId: 'OneClickDriver',
-      initialNotificationTitle: 'One Click Driver',
-      initialNotificationContent: 'Current Location Fetching',
-      foregroundServiceNotificationId: 888,
-    ),
-    iosConfiguration: IosConfiguration(
-      // auto start service
-      autoStart: true,
-      // this will be executed when app is in foreground in separated isolate
-      onForeground: onStart,
-      // you have to enable background fetch capability on xcode project
-      onBackground: onIosBackground,
-    ),
-  );
-}
+// Future<void> initializeService() async {
+//   final service = FlutterBackgroundService();
+//
+//   /// OPTIONAL, using custom notification channel id
+//   AndroidNotificationChannel channel = AndroidNotificationChannel(
+//     'OneClickDriver', // id
+//     'One Click Driver Current Location Fetching', // title
+//     // description: 'Current Location: $city', // description
+//     importance: Importance.low, // importance must be at low or higher level
+//   );
+//
+//   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+//       FlutterLocalNotificationsPlugin();
+//
+//   if (Platform.isIOS || Platform.isAndroid) {
+//     await flutterLocalNotificationsPlugin.initialize(
+//       const InitializationSettings(
+//         iOS: DarwinInitializationSettings(),
+//         android: AndroidInitializationSettings('ic_bg_service_small'),
+//       ),
+//     );
+//   }
+//
+//   await flutterLocalNotificationsPlugin
+//       .resolvePlatformSpecificImplementation<
+//           AndroidFlutterLocalNotificationsPlugin>()
+//       ?.createNotificationChannel(channel);
+//
+//   await service.configure(
+//     androidConfiguration: AndroidConfiguration(
+//       // this will be executed when app is in foreground or background in separated isolate
+//       onStart: onStart,
+//       // auto start service
+//       autoStart: true,
+//       isForegroundMode: true,
+//       notificationChannelId: 'OneClickDriver',
+//       initialNotificationTitle: 'One Click Driver',
+//       initialNotificationContent: 'Current Location Fetching',
+//       foregroundServiceNotificationId: 888,
+//     ),
+//     iosConfiguration: IosConfiguration(
+//       // auto start service
+//       autoStart: true,
+//       // this will be executed when app is in foreground in separated isolate
+//       onForeground: onStart,
+//       // you have to enable background fetch capability on xcode project
+//       onBackground: onIosBackground,
+//     ),
+//   );
+// }
 
 // to ensure this is executed
 // run app from xcode, then from xcode menu, select Simulate Background Fetch
@@ -131,38 +139,38 @@ Future<bool> onIosBackground(ServiceInstance service) async {
   return true;
 }
 
-@pragma('vm:entry-point')
-void onStart(ServiceInstance service) async {
-  // Only available for flutter 3.0.0 and later
-  DartPluginRegistrant.ensureInitialized();
-  // For flutter prior to version 3.0.0
-  // We have to register the plugin manually
-
-  SharedPreferences preferences = await SharedPreferences.getInstance();
-  await preferences.setString("hello", "world");
-
-  /// OPTIONAL when use custom notification
-  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
-
-  if (service is AndroidServiceInstance) {
-    service.on('setAsForeground').listen((event) {
-      service.setAsForegroundService();
-    });
-
-    service.on('setAsBackground').listen((event) {
-      service.setAsBackgroundService();
-    });
-  }
-
-  service.on('stopService').listen((event) {
-    service.stopSelf();
-  });
-
-  Timer.periodic(Duration(minutes: 1), (timer) async {
-    checkAppPermission();
-  });
-}
+// @pragma('vm:entry-point')
+// void onStart(ServiceInstance service) async {
+//   // Only available for flutter 3.0.0 and later
+//   DartPluginRegistrant.ensureInitialized();
+//   // For flutter prior to version 3.0.0
+//   // We have to register the plugin manually
+//
+//   SharedPreferences preferences = await SharedPreferences.getInstance();
+//   await preferences.setString("hello", "world");
+//
+//   /// OPTIONAL when use custom notification
+//   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+//       FlutterLocalNotificationsPlugin();
+//
+//   if (service is AndroidServiceInstance) {
+//     service.on('setAsForeground').listen((event) {
+//       service.setAsForegroundService();
+//     });
+//
+//     service.on('setAsBackground').listen((event) {
+//       service.setAsBackgroundService();
+//     });
+//   }
+//
+//   service.on('stopService').listen((event) {
+//     service.stopSelf();
+//   });
+//
+//   Timer.periodic(Duration(minutes: 1), (timer) async {
+//     checkAppPermission();
+//   });
+// }
 
 class Home extends StatefulWidget {
   @override
@@ -203,7 +211,7 @@ class _HomeState extends State<Home> {
       pageUpdate,
       walletBalance;
   String? sValue;
-  List<dynamic> requestList = [];
+
   List<String> cancelList = [
     "Bad Location",
     "Low Rider Score",
@@ -240,7 +248,7 @@ class _HomeState extends State<Home> {
       locationApiTime();
     } else {
       setState(() {
-        locationApiTimer!.cancel();
+        locationApiTimer.cancel();
       });
       locationDialog();
     }
@@ -277,12 +285,7 @@ class _HomeState extends State<Home> {
                 backgroundColor: Clr().white,
                 leadingWidth: 52,
                 centerTitle: true,
-                title: InkWell(
-                    onTap: () {
-                      // STM().redirect2page(context, UploadDocuments());
-                      STM().redirect2page(context, VehicleDetails());
-                    },
-                    child: Image.asset("assets/home_logo.png")),
+                title: Image.asset("assets/home_logo.png"),
                 leading: InkWell(
                     onTap: () {
                       // STM().back2Previous(ctx);
@@ -327,7 +330,8 @@ class _HomeState extends State<Home> {
                   )
                 ],
               ),
-        drawer: pageType != null && pageType['status'] == 2 ? null : drawerLayout(),
+        drawer:
+            pageType != null && pageType['status'] == 2 ? null : drawerLayout(),
         body: loading == true
             ? UpgradeAlert(
                 upgrader: Upgrader(
@@ -421,197 +425,206 @@ class _HomeState extends State<Home> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Clr().lightGrey.withOpacity(0.2),
-                spreadRadius: 0.001,
-                blurRadius: 10,
-                offset: Offset(0, -5), // changes position of shadow
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
               ),
-            ],
-          ),
-          child: Card(
-            elevation: 0.1,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            )),
-            color: Color(0xffFFFCE3),
-            child: Padding(
-              padding: EdgeInsets.all(Dim().d12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(55),
-                        color: Clr().white,
-                        border: Border.all(
+              boxShadow: [
+                BoxShadow(
+                  color: Clr().lightGrey.withOpacity(0.2),
+                  spreadRadius: 0.001,
+                  blurRadius: 10,
+                  offset: Offset(0, -5), // changes position of shadow
+                ),
+              ],
+            ),
+            child: Card(
+              elevation: 0.1,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
+              )),
+              color: Color(0xffFFFCE3),
+              child: Padding(
+                padding: EdgeInsets.all(Dim().d12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(55),
+                          color: Clr().white,
+                          border: Border.all(
+                            color: Color(0xffFFE08F),
+                          )),
+                      child: Padding(
+                        padding: EdgeInsets.all(Dim().d12),
+                        child: SvgPicture.asset("assets/bag.svg"),
+                      ),
+                    ),
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                    Container(
+                        height: 36,
+                        child: Text(
+                          "Total Income",
+                          overflow: TextOverflow.fade,
+                        )),
+                    Text(
+                      STM().formatAmount(incomeData ?? 0),
+                      style: Sty().smallText.copyWith(
                           color: Color(0xffFFE08F),
-                        )),
-                    child: Padding(
-                      padding: EdgeInsets.all(Dim().d12),
-                      child: SvgPicture.asset("assets/bag.svg"),
+                          fontWeight: FontWeight.w800),
                     ),
-                  ),
-                  SizedBox(
-                    height: Dim().d12,
-                  ),
-                  Container(
-                      height: 36,
-                      child: Text(
-                        "Total Income",
-                        overflow: TextOverflow.fade,
-                      )),
-                  Text(
-                    STM().formatAmount(incomeData ?? 0),
-                    style: Sty().smallText.copyWith(
-                        color: Color(0xffFFE08F), fontWeight: FontWeight.w800),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Clr().lightGrey.withOpacity(0.2),
-                spreadRadius: 0.001,
-                blurRadius: 10,
-                offset: Offset(0, -5), // changes position of shadow
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
               ),
-            ],
-          ),
-          child: Card(
-            elevation: 0.1,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            )),
-            color: Color(0xffE9FFE3),
-            child: Padding(
-              padding: EdgeInsets.all(Dim().d12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(55),
-                        color: Clr().white,
-                        border: Border.all(
-                          color: Color(0xff93FFBE),
-                        )),
-                    child: Padding(
-                      padding: EdgeInsets.all(Dim().d8),
-                      child: SvgPicture.asset("assets/truck.svg"),
+              boxShadow: [
+                BoxShadow(
+                  color: Clr().lightGrey.withOpacity(0.2),
+                  spreadRadius: 0.001,
+                  blurRadius: 10,
+                  offset: Offset(0, -5), // changes position of shadow
+                ),
+              ],
+            ),
+            child: Card(
+              elevation: 0.1,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
+              )),
+              color: Color(0xffE9FFE3),
+              child: Padding(
+                padding: EdgeInsets.all(Dim().d12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(55),
+                          color: Clr().white,
+                          border: Border.all(
+                            color: Color(0xff93FFBE),
+                          )),
+                      child: Padding(
+                        padding: EdgeInsets.all(Dim().d8),
+                        child: SvgPicture.asset("assets/truck.svg"),
+                      ),
                     ),
-                  ),
-                  SizedBox(
-                    height: Dim().d12,
-                  ),
-                  Container(
-                      height: 36,
-                      child: Text(
-                        "Rides (Today)",
-                        overflow: TextOverflow.fade,
-                      )),
-                  Text(
-                    STM().formatAmount(ridesTodayData ?? 0),
-                    style: Sty().smallText.copyWith(
-                        color: Color(0xff07CB55), fontWeight: FontWeight.w800),
-                  ),
-                ],
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                    Container(
+                        height: 36,
+                        child: Text(
+                          "Rides (Today)",
+                          overflow: TextOverflow.fade,
+                        )),
+                    Text(
+                      STM().formatAmount(ridesTodayData ?? 0),
+                      style: Sty().smallText.copyWith(
+                          color: Color(0xff07CB55),
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Clr().lightGrey.withOpacity(0.2),
-                spreadRadius: 0.001,
-                blurRadius: 10,
-                offset: Offset(0, -5), // changes position of shadow
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
               ),
-            ],
-          ),
-          child: Card(
-            elevation: 0.1,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20),
-              bottomRight: Radius.circular(20),
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(60),
-            )),
-            color: Color(0xffE3E6FF),
-            child: Padding(
-              padding: EdgeInsets.all(Dim().d12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(55),
-                        color: Clr().white,
-                        border: Border.all(
+              boxShadow: [
+                BoxShadow(
+                  color: Clr().lightGrey.withOpacity(0.2),
+                  spreadRadius: 0.001,
+                  blurRadius: 10,
+                  offset: Offset(0, -5), // changes position of shadow
+                ),
+              ],
+            ),
+            child: Card(
+              elevation: 0.1,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(60),
+              )),
+              color: Color(0xffE3E6FF),
+              child: Padding(
+                padding: EdgeInsets.all(Dim().d12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(55),
+                          color: Clr().white,
+                          border: Border.all(
+                            color: Color(0xff928FFF),
+                          )),
+                      child: Padding(
+                        padding: EdgeInsets.all(Dim().d12),
+                        child: SvgPicture.asset("assets/cancelled.svg"),
+                      ),
+                    ),
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                    SizedBox(
+                        height: Dim().d36,
+                        child: const Text(
+                          "Leads (Today)",
+                          overflow: TextOverflow.fade,
+                        )),
+                    Text(
+                      STM().formatAmount(leadsTodayData ?? 0),
+                      style: Sty().smallText.copyWith(
                           color: Color(0xff928FFF),
-                        )),
-                    child: Padding(
-                      padding: EdgeInsets.all(Dim().d12),
-                      child: SvgPicture.asset("assets/cancelled.svg"),
+                          fontWeight: FontWeight.w800),
                     ),
-                  ),
-                  SizedBox(
-                    height: Dim().d12,
-                  ),
-                  SizedBox(
-                      height: Dim().d36,
-                      child: const Text(
-                        "Leads (Today)",
-                        overflow: TextOverflow.fade,
-                      )),
-                  Text(
-                    STM().formatAmount(leadsTodayData ?? 0),
-                    style: Sty().smallText.copyWith(
-                        color: Color(0xff928FFF), fontWeight: FontWeight.w800),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -793,9 +806,10 @@ class _HomeState extends State<Home> {
     );
   }
 
-  CardLayout(v, index,list) {
-    bool? twincon;
+  CardLayout(v, index, list) {
     int? minutes, seconds;
+    int minute;
+    int second;
     final now = DateTime.now();
     final timeGet = DateTime.parse(v['created_at'].toString());
     final aftercurrentTime = timeGet.add(Duration(minutes: 10));
@@ -805,441 +819,432 @@ class _HomeState extends State<Home> {
       seconds = int.parse(DateFormat('ss').format(aftercurrentTime)) -
           int.parse(DateFormat('ss').format(now));
     }
-    return Column(
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                  color: Clr().borderColor.withOpacity(1),
-                  spreadRadius: 0.1,
-                  blurRadius: 6,
-                  offset: const Offset(
-                    0,
-                    6,
-                  ) // changes position of shadow
-                  ),
-            ],
-          ),
-          child: Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: Clr().borderColor)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: Dim().d12,
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: Dim().d28),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Wrap(
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'From',
-                                  style: Sty().mediumText.copyWith(
-                                        color: Clr().textcolor,
-                                      ),
-                                ),
-                                SizedBox(
-                                  height: Dim().d4,
-                                ),
-                                Text(
-                                  '${v['city']}',
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Sty()
-                                      .smallText
-                                      .copyWith(color: Clr().primaryColor),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Column(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                      color: Clr().borderColor.withOpacity(1),
+                      spreadRadius: 0.1,
+                      blurRadius: 6,
+                      offset: const Offset(
+                        0,
+                        6,
+                      ) // changes position of shadow
                       ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          v['user']['type'] == 'Cash'
-                              ? SvgPicture.asset("assets/cash.svg")
-                              : SvgPicture.asset("assets/billing.svg"),
-                          SizedBox(
-                            height: Dim().d12,
-                          ),
-                          InkWell(
-                            onTap: () {
-                              MapsLauncher.launchCoordinates(
-                                  double.parse(v['longitude']),
-                                  double.parse(v['latitude']));
-                            },
-                            child: Padding(
-                              padding: EdgeInsets.only(right: Dim().d8),
-                              child: Text(
-                                "View Map",
-                                style: Sty().smallText.copyWith(
-                                    height: 1.2,
-                                    color: Clr().primaryColor,
-                                    fontWeight: FontWeight.w500,
-                                    decoration: TextDecoration.underline,
-                                    decorationColor: Clr().primaryColor),
-                              ),
-                            ),
-                          )
-                        ],
-                      )
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: Dim().d12,
-                ),
-                Padding(
-                  padding: EdgeInsets.only(left: Dim().d12, top: Dim().d8),
-                  child: FixedTimeline.tileBuilder(
-                    mainAxisSize: MainAxisSize.min,
-                    verticalDirection: VerticalDirection.down,
-                    theme: TimelineThemeData(
-                      indicatorTheme:
-                          IndicatorThemeData(size: Dim().d8, position: 0),
-                      color: Clr().primaryColor,
-                      connectorTheme: ConnectorThemeData(
-                        color: Clr().primaryColor.withOpacity(0.4),
-                        thickness: 2.0,
-                        indent: 3.0,
-                      ),
-                      indicatorPosition: 0,
-                      nodePosition: 0,
+                ],
+              ),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: Clr().borderColor)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      height: Dim().d12,
                     ),
-                    builder: TimelineTileBuilder.connectedFromStyle(
-                      connectorStyleBuilder: (context, index) {
-                        return ConnectorStyle.dashedLine;
-                      },
-                      indicatorStyleBuilder: (context, index) {
-                        return IndicatorStyle.dot;
-                      },
-                      contentsAlign: ContentsAlign.basic,
-                      oppositeContentsBuilder: (context, index) =>
-                          SizedBox.shrink(),
-                      lastConnectorStyle: ConnectorStyle.transparent,
-                      firstConnectorStyle: ConnectorStyle.transparent,
-                      contentsBuilder: (context, index) {
-                        return Padding(
-                          padding: EdgeInsets.only(
-                              left: Dim().d12, bottom: Dim().d12),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Wrap(
-                                  crossAxisAlignment: WrapCrossAlignment.center,
+                    Padding(
+                      padding: EdgeInsets.only(left: Dim().d28),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'To',
-                                          style: Sty().mediumText.copyWith(
-                                                color: Clr().textcolor,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                        ),
-                                        SizedBox(
-                                          height: Dim().d4,
-                                        ),
-                                        Text(
-                                          '${v['receiver_address'][index]['city']}',
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: Sty().smallText.copyWith(
-                                              color: Clr().primaryColor),
-                                        ),
-                                      ],
+                                    Text(
+                                      'From',
+                                      style: Sty().mediumText.copyWith(
+                                            color: Clr().textcolor,
+                                          ),
+                                    ),
+                                    SizedBox(
+                                      height: Dim().d4,
+                                    ),
+                                    Text(
+                                      '${v['city']} ${v['pincode']}',
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Sty()
+                                          .smallText
+                                          .copyWith(color: Clr().primaryColor),
                                     ),
                                   ],
                                 ),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              v['user']['type'] == 'Cash'
+                                  ? SvgPicture.asset("assets/cash.svg")
+                                  : SvgPicture.asset("assets/billing.svg"),
+                              SizedBox(
+                                height: Dim().d12,
                               ),
                               InkWell(
                                 onTap: () {
                                   MapsLauncher.launchCoordinates(
-                                      double.parse(v['receiver_address'][index]
-                                          ['latitude']),
-                                      double.parse(v['receiver_address'][index]
-                                          ['longitude']));
+                                      double.parse(v['longitude']),
+                                      double.parse(v['latitude']));
                                 },
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.only(right: 10),
-                                      child: Text(
-                                        "View Map",
-                                        style: Sty().smallText.copyWith(
-                                            height: 1.2,
-                                            color: Clr().primaryColor,
-                                            fontWeight: FontWeight.w500,
-                                            decoration:
-                                                TextDecoration.underline,
-                                            decorationColor:
-                                                Clr().primaryColor),
-                                      ),
-                                    )
-                                  ],
+                                child: Padding(
+                                  padding: EdgeInsets.only(right: Dim().d8),
+                                  child: Text(
+                                    "View Map",
+                                    style: Sty().smallText.copyWith(
+                                        height: 1.2,
+                                        color: Clr().primaryColor,
+                                        fontWeight: FontWeight.w500,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: Clr().primaryColor),
+                                  ),
                                 ),
                               )
                             ],
-                          ),
-                        );
-                      },
-                      itemCount: v['receiver_address'].length,
-                    ),
-                  ),
-                ),
-                SizedBox(
-                  height: Dim().d16,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dim().d8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                        color: Color(0xFFF7F7F7),
-                        borderRadius: BorderRadius.circular(10)),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: Dim().d8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Column(
-                            children: [
-                              Text(
-                                "Pick-up Date:",
-                                style: Sty()
-                                    .microText
-                                    .copyWith(color: Clr().grey2),
-                              ),
-                              SizedBox(
-                                height: Dim().d4,
-                              ),
-                              Text(
-                                "${v['date']}",
-                                style: Sty().smallText.copyWith(
-                                    color: Clr().primaryColor,
-                                    fontWeight: FontWeight.w600),
-                              )
-                            ],
-                          ),
-                          Container(
-                            color: Clr().primaryColor,
-                            height: 25,
-                            width: 0.5,
-                          ),
-                          Column(
-                            children: [
-                              Text(
-                                "Pick-up Time:",
-                                style: Sty()
-                                    .microText
-                                    .copyWith(color: Clr().grey2),
-                              ),
-                              SizedBox(
-                                height: Dim().d4,
-                              ),
-                              Text(
-                                "${v['time']}",
-                                style: Sty().smallText.copyWith(
-                                    color: Clr().yellow,
-                                    fontWeight: FontWeight.w600),
-                              )
-                            ],
-                          ),
-                          Container(
-                            color: Clr().primaryColor,
-                            height: 25,
-                            width: 0.5,
-                          ),
-                          Column(
-                            children: [
-                              Text(
-                                "Amount Payable",
-                                style: Sty()
-                                    .microText
-                                    .copyWith(color: Clr().grey2),
-                              ),
-                              SizedBox(
-                                height: Dim().d4,
-                              ),
-                              Text(
-                                "₹0(Est.)",
-                                style: Sty().smallText.copyWith(
-                                    color: Clr().green,
-                                    fontWeight: FontWeight.w600),
-                              )
-                            ],
-                          ),
+                          )
                         ],
                       ),
                     ),
-                  ),
-                ),
-                SizedBox(
-                  height: Dim().d20,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dim().d12),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 20,
-                        child: Divider(
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(left: Dim().d12, top: Dim().d8),
+                      child: FixedTimeline.tileBuilder(
+                        mainAxisSize: MainAxisSize.min,
+                        verticalDirection: VerticalDirection.down,
+                        theme: TimelineThemeData(
+                          indicatorTheme:
+                              IndicatorThemeData(size: Dim().d8, position: 0),
                           color: Clr().primaryColor,
-                          thickness: 0.4,
+                          connectorTheme: ConnectorThemeData(
+                            color: Clr().primaryColor.withOpacity(0.4),
+                            thickness: 2.0,
+                            indent: 3.0,
+                          ),
+                          indicatorPosition: 0,
+                          nodePosition: 0,
+                        ),
+                        builder: TimelineTileBuilder.connectedFromStyle(
+                          connectorStyleBuilder: (context, index) {
+                            return ConnectorStyle.dashedLine;
+                          },
+                          indicatorStyleBuilder: (context, index) {
+                            return IndicatorStyle.dot;
+                          },
+                          contentsAlign: ContentsAlign.basic,
+                          oppositeContentsBuilder: (context, index) =>
+                              SizedBox.shrink(),
+                          lastConnectorStyle: ConnectorStyle.transparent,
+                          firstConnectorStyle: ConnectorStyle.transparent,
+                          contentsBuilder: (context, index) {
+                            return Padding(
+                              padding: EdgeInsets.only(
+                                  left: Dim().d12, bottom: Dim().d12),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    child: Wrap(
+                                      crossAxisAlignment:
+                                          WrapCrossAlignment.center,
+                                      children: [
+                                        Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'To',
+                                              style: Sty().mediumText.copyWith(
+                                                    color: Clr().textcolor,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                            SizedBox(
+                                              height: Dim().d4,
+                                            ),
+                                            Text(
+                                              '${v['receiver_address'][index]['city']} ${v['receiver_address'][index]['pincode']}',
+                                              maxLines: 3,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: Sty().smallText.copyWith(
+                                                  color: Clr().primaryColor),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      MapsLauncher.launchCoordinates(
+                                          double.parse(v['receiver_address']
+                                              [index]['latitude']),
+                                          double.parse(v['receiver_address']
+                                              [index]['longitude']));
+                                    },
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.only(right: 10),
+                                          child: Text(
+                                            "View Map",
+                                            style: Sty().smallText.copyWith(
+                                                height: 1.2,
+                                                color: Clr().primaryColor,
+                                                fontWeight: FontWeight.w500,
+                                                decoration:
+                                                    TextDecoration.underline,
+                                                decorationColor:
+                                                    Clr().primaryColor),
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  )
+                                ],
+                              ),
+                            );
+                          },
+                          itemCount: v['receiver_address'].length,
                         ),
                       ),
-                      SizedBox(
-                        width: Dim().d12,
-                      ),
-                      Text(
-                        "Goods Type",
-                        style: Sty().mediumText.copyWith(
-                              color: Clr().primaryColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      SizedBox(
-                        width: Dim().d12,
-                      ),
-                      Expanded(
-                          child: Divider(
-                        color: Clr().primaryColor,
-                        thickness: 0.4,
-                      )),
-                    ],
-                  ),
-                ),
-                SizedBox(
-                  height: Dim().d12,
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: Dim().d12),
-                  child: Text(
-                    '${v['goods_type']}',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty().smallText.copyWith(color: Clr().primaryColor),
-                  ),
-                ),
-                SizedBox(
-                  height: Dim().d20,
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                      color: Clr().primaryColor,
-                      borderRadius: BorderRadius.only(
-                        bottomRight: Radius.circular(10),
-                        bottomLeft: Radius.circular(10),
-                      )),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: Dim().d16,
-                      vertical: Dim().d8,
                     ),
-                    child: twincon == true ? Container() :  Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TweenAnimationBuilder<Duration>(
-                            duration: Duration(minutes: minutes!, seconds: seconds!),
-                            tween: Tween(
-                                begin: Duration(minutes: minutes, seconds: seconds),
-                                end: Duration.zero),
-                            onEnd: () {
-                              setState(() {
-                                twincon = true;
-                              });
-                            },
-                            builder: (BuildContext context, Duration value,
-                                Widget? child) {
-                              final minutes = value.inMinutes;
-                              final seconds = value.inSeconds % 60;
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 5),
-                                child: Text(
-                                  "0$minutes:$seconds",
-                                  textAlign: TextAlign.center,
-                                  style: Sty().smallText.copyWith(
-                                      color: Clr().secondary,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: "MulshiSemi",
-                                      fontSize: Dim().d28),
+                    SizedBox(
+                      height: Dim().d16,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: Dim().d8),
+                      child: Container(
+                        decoration: BoxDecoration(
+                            color: Color(0xFFF7F7F7),
+                            borderRadius: BorderRadius.circular(10)),
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: Dim().d8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Column(
+                                children: [
+                                  Text(
+                                    "Pick-up Date:",
+                                    style: Sty()
+                                        .microText
+                                        .copyWith(color: Clr().grey2),
+                                  ),
+                                  SizedBox(
+                                    height: Dim().d4,
+                                  ),
+                                  Text(
+                                    "${v['date']}",
+                                    style: Sty().smallText.copyWith(
+                                        color: Clr().primaryColor,
+                                        fontWeight: FontWeight.w600),
+                                  )
+                                ],
+                              ),
+                              Container(
+                                color: Clr().primaryColor,
+                                height: 25,
+                                width: 0.5,
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    "Pick-up Time:",
+                                    style: Sty()
+                                        .microText
+                                        .copyWith(color: Clr().grey2),
+                                  ),
+                                  SizedBox(
+                                    height: Dim().d4,
+                                  ),
+                                  Text(
+                                    "${v['time']}",
+                                    style: Sty().smallText.copyWith(
+                                        color: Clr().yellow,
+                                        fontWeight: FontWeight.w600),
+                                  )
+                                ],
+                              ),
+                              Container(
+                                color: Clr().primaryColor,
+                                height: 25,
+                                width: 0.5,
+                              ),
+                              Column(
+                                children: [
+                                  Text(
+                                    "Amount Payable",
+                                    style: Sty()
+                                        .microText
+                                        .copyWith(color: Clr().grey2),
+                                  ),
+                                  SizedBox(
+                                    height: Dim().d4,
+                                  ),
+                                  Text(
+                                    "₹${v['total_charge']}(Est.)",
+                                    style: Sty().smallText.copyWith(
+                                        color: Clr().green,
+                                        fontWeight: FontWeight.w600),
+                                  )
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      height: Dim().d20,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: Dim().d12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 20,
+                            child: Divider(
+                              color: Clr().primaryColor,
+                              thickness: 0.4,
+                            ),
+                          ),
+                          SizedBox(
+                            width: Dim().d12,
+                          ),
+                          Text(
+                            "Goods Type",
+                            style: Sty().mediumText.copyWith(
+                                  color: Clr().primaryColor,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              );
-                            }),
-                        Wrap(
-                          children: [
-                            // InkWell(
-                            //   onTap: () {
-                            //     _cancelDialog(ctx);
-                            //   },
-                            //   child: Container(
-                            //     height: 50,
-                            //     width: 50,
-                            //     decoration: BoxDecoration(
-                            //         borderRadius: BorderRadius.circular(55),
-                            //         color: Clr().white,
-                            //         border: Border.all(
-                            //           color: Clr().primaryColor,
-                            //         )),
-                            //     child: Padding(
-                            //       padding: EdgeInsets.all(Dim().d12),
-                            //       child: SvgPicture.asset("assets/cancel.svg"),
-                            //     ),
-                            //   ),
-                            // ),
-                            // SizedBox(
-                            //   width: Dim().d20,
-                            // ),
-                            InkWell(
-                              onTap: () {
-                                _rideConfirmedDialog(ctx,v['id']);
-                              },
-                              child: Container(
-                                height: 50,
-                                width: 50,
-                                decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(55),
-                                    color: Clr().white,
-                                    border: Border.all(
-                                      color: Clr().primaryColor,
-                                    )),
-                                child: Padding(
-                                  padding: EdgeInsets.all(Dim().d12),
-                                  child: SvgPicture.asset("assets/accept.svg"),
-                                ),
+                          ),
+                          SizedBox(
+                            width: Dim().d12,
+                          ),
+                          Expanded(
+                              child: Divider(
+                            color: Clr().primaryColor,
+                            thickness: 0.4,
+                          )),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: Dim().d12),
+                      child: Text(
+                        '${v['goods_type']}',
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style:
+                            Sty().smallText.copyWith(color: Clr().primaryColor),
+                      ),
+                    ),
+                    SizedBox(
+                      height: Dim().d20,
+                    ),
+                     Container(
+                            decoration: BoxDecoration(
+                                color: Clr().primaryColor,
+                                borderRadius: BorderRadius.only(
+                                  bottomRight: Radius.circular(10),
+                                  bottomLeft: Radius.circular(10),
+                                )),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: Dim().d16,
+                                vertical: Dim().d8,
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  TweenAnimationBuilder(
+                                      duration: Duration(
+                                          minutes: minutes!, seconds: seconds!),
+                                      tween: Tween(
+                                          begin: Duration(
+                                              minutes: minutes,
+                                              seconds: seconds),
+                                          end: Duration.zero),
+                                      onEnd: () {
+                                        setState(() {
+                                          STM().finishAffinity(ctx, Home());
+                                        });
+                                      },
+                                      builder: (BuildContext context,
+                                          Duration value, Widget? child) {
+                                        minute = value.inMinutes;
+                                        second = value.inSeconds % 60;
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 5),
+                                          child: Text(
+                                            "0$minute:$second",
+                                            textAlign: TextAlign.center,
+                                            style: Sty().smallText.copyWith(
+                                                color: Clr().white,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: "MulshiSemi",
+                                                fontSize: Dim().d28),
+                                          ),
+                                        );
+                                      }),
+                                  Wrap(
+                                    children: [
+                                      InkWell(
+                                        onTap: () {
+                                          _rideConfirmedDialog(ctx, v['id'],v);
+                                        },
+                                        child: Container(
+                                          height: 50,
+                                          width: 50,
+                                          decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(55),
+                                              color: Clr().white,
+                                              border: Border.all(
+                                                color: Clr().primaryColor,
+                                              )),
+                                          child: Padding(
+                                            padding: EdgeInsets.all(Dim().d12),
+                                            child: SvgPicture.asset(
+                                                "assets/accept.svg"),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                ],
                               ),
                             ),
-                          ],
-                        )
-                      ],
-                    ),
-                  ),
-                )
-              ],
+                          )
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 
@@ -1258,7 +1263,7 @@ class _HomeState extends State<Home> {
             itemCount: requestList.length,
             itemBuilder: (context, index) {
               // var v = notificationList[index];
-              return CardLayout(requestList[index], index,requestList);
+              return CardLayout(requestList[index], index, requestList);
             },
             separatorBuilder: (context, index) {
               return SizedBox(
@@ -1288,7 +1293,7 @@ class _HomeState extends State<Home> {
     );
   }
 
-  _rideConfirmedDialog(ctx,id) {
+  _rideConfirmedDialog(ctx, id,v) {
     AwesomeDialog(
       isDense: false,
       context: ctx,
@@ -1308,7 +1313,7 @@ class _HomeState extends State<Home> {
                     color: Clr().textcolor),
                 children: <TextSpan>[
                   TextSpan(
-                    text: '₹0',
+                    text: '₹${v['total_charge']}',
                     style: Sty().smallText.copyWith(
                           color: Clr().secondary,
                           fontSize: 20,
@@ -1870,6 +1875,7 @@ class _HomeState extends State<Home> {
       });
     } else {
       setState(() {
+        homeApiTimer.cancel();
         loading = true;
         pageType = result['data'];
       });
@@ -1948,7 +1954,7 @@ class _HomeState extends State<Home> {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       setState(() {
-        locationApiTimer!.cancel();
+        locationApiTimer.cancel();
       });
       AwesomeDialog(
           context: ctx,
@@ -2022,19 +2028,18 @@ class _HomeState extends State<Home> {
     }
   }
 
-
   /// accept ride
- void acceptRide(id) async {
+  void acceptRide(id) async {
     FormData body = FormData.fromMap({
       'request_id': id,
     });
-    var result = await STM().postWithoutDialog(ctx, 'accept_ride', body, usertoken);
+    var result =
+        await STM().postWithoutDialog(ctx, 'accept_ride', body, usertoken);
     var success = result['success'];
-    if(success){
+    if (success) {
       STM().successDialog(ctx, result['message'], MyRides(initialindex: 0));
-    }else{
+    } else {
       STM().errorDialog(ctx, result['message']);
     }
- }
-
+  }
 }

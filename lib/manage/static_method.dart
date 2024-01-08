@@ -166,6 +166,7 @@ class STM {
           .show();
     }
   }
+
   void deleteCartDialog(BuildContext context, String message) {
     if (message.contains('Inactive')) {
       errorDialogWithAffinity(context, message, Login());
@@ -261,7 +262,7 @@ class STM {
               Padding(
                 padding: EdgeInsets.all(Dim().d12),
                 // child: SpinKitSquareCircle(
-                child:  SpinKitFadingCircle(
+                child: SpinKitFadingCircle(
                   color: Clr().primaryColor,
                 ),
               ),
@@ -413,7 +414,6 @@ class STM {
                 padding: EdgeInsets.symmetric(vertical: Dim().d4),
                 child: SvgPicture.asset(
                   "assets/bn_notification.svg",
-
                 ),
               ),
         label: 'Notification',
@@ -660,12 +660,14 @@ class STM {
       debugPrint(e.message);
       dialog.dismiss();
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
-  Future<dynamic> getWithoutDialog(ctx, name,token) async {
+  Future<dynamic> getWithoutDialog(ctx, name, token) async {
     SharedPreferences sp = await SharedPreferences.getInstance();
     Dio dio = Dio(
       BaseOptions(
@@ -689,7 +691,9 @@ class STM {
     } on DioError catch (e) {
       debugPrint(e.message);
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
@@ -726,7 +730,9 @@ class STM {
     } on DioError catch (e) {
       dialog.dismiss();
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
@@ -757,7 +763,9 @@ class STM {
       }
     } on DioError catch (e) {
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
@@ -795,7 +803,9 @@ class STM {
       debugPrint(e.message);
       dialog.dismiss();
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
@@ -829,12 +839,14 @@ class STM {
       debugPrint(e.message);
       dialog.dismiss();
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
-  Future<dynamic> postWithoutDialog(ctx, name, body,token) async {
+  Future<dynamic> postWithoutDialog(ctx, name, body, token) async {
     SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     Dio dio = Dio(
@@ -859,12 +871,14 @@ class STM {
       }
     } on DioError catch (e) {
       sp.clear();
-      e.message == 'Http status error [403]' ? STM().finishAffinity(ctx, Login()) : STM().errorDialog(ctx, e.message);
+      e.message == 'Http status error [403]'
+          ? STM().finishAffinity(ctx, Login())
+          : STM().errorDialog(ctx, e.message);
     }
     return result;
   }
 
-  Future<dynamic> postWithoutDialogMethod2(name, body,token) async {
+  Future<dynamic> postWithoutDialogMethod2(name, body, token) async {
     SharedPreferences sp = await SharedPreferences.getInstance();
     //Dialog
     Dio dio = Dio(
@@ -879,7 +893,7 @@ class STM {
     String url = AppUrl.mainUrl + name;
     Response response = await dio.post(url, data: body);
     dynamic result;
-    if(response.statusCode == 200){
+    if (response.statusCode == 200) {
       result = response.data;
     }
     return result;
@@ -896,12 +910,19 @@ class STM {
 
   Widget imageView(Map<String, dynamic> v) {
     return v['url'].toString().contains('assets')
-        ? Image.asset(
-            '${v['url']}',
-            width: v['width'],
-            height: v['height'],
-            fit: v['fit'] ?? BoxFit.fill,
-          )
+        ? v['url'].toString().contains('svg')
+            ? SvgPicture.asset(
+                '${v['url']}',
+                width: v['width'],
+                height: v['height'],
+                fit: v['fit'] ?? BoxFit.fill,
+              )
+            : Image.asset(
+                '${v['url']}',
+                width: v['width'],
+                height: v['height'],
+                fit: v['fit'] ?? BoxFit.fill,
+              )
         : CachedNetworkImage(
             width: v['width'],
             height: v['height'],
@@ -955,20 +976,19 @@ class STM {
     if (amount >= 1000 && amount < 100000) {
       // Convert to "K" (thousands)
       return NumberFormat('#,##,##0.##', 'en_IN')
-          .format(amount / 1000)
-          .toString() +
+              .format(amount / 1000)
+              .toString() +
           'K';
       ;
     } else if (amount >= 100000) {
       // Convert to "Lakh" (hundreds of thousands) with Indian Rupee symbol (₹)
       return NumberFormat('#,##,##0.###', 'en_IN')
-          .format(amount / 100000)
-          .toString() +
+              .format(amount / 100000)
+              .toString() +
           ' Lac';
     } else {
       // Use regular formatting for smaller amounts
       return NumberFormat('#,##0', 'en_IN').format(amount);
     }
   }
-
 }

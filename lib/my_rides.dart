@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
+import 'package:oneclick_driver/ride_started.dart';
+import 'package:oneclick_driver/values/strings.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'bottom_navigation/bottom_navigation.dart';
+import 'destination.dart';
 import 'home.dart';
 import 'manage/static_method.dart';
 import 'loading_session.dart';
@@ -132,10 +135,46 @@ class _MyRidesState extends State<MyRides> {
             ),
             body: TabBarView(
               children: [
-                listLayout(upcomingList),
-                listLayout(ongingList),
-                listLayout(completeList),
-                listLayout(cancelledList),
+                upcomingList.isEmpty
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: Dim().d20, vertical: Dim().d100),
+                        child: Text(
+                          'Currently, no upcoming rides are scheduled.',
+                          style: Sty().mediumBoldText,
+                        ),
+                      )
+                    : listLayout(upcomingList),
+                ongingList.isEmpty
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: Dim().d20, vertical: Dim().d100),
+                        child: Text(
+                          'Currently, there are no ongoing rides at the moment.',
+                          style: Sty().mediumBoldText,
+                        ),
+                      )
+                    : listLayout(ongingList),
+                completeList.isEmpty
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: Dim().d20, vertical: Dim().d100),
+                        child: Text(
+                          'Currently, there are no completed rides.',
+                          style: Sty().mediumBoldText,
+                        ),
+                      )
+                    : listLayout(completeList),
+                cancelledList.isEmpty
+                    ? Padding(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: Dim().d20, vertical: Dim().d100),
+                        child: Text(
+                          'Currently, there are no cancelled rides.',
+                          style: Sty().mediumBoldText,
+                        ),
+                      )
+                    : listLayout(cancelledList),
               ],
             )),
       ),
@@ -281,7 +320,7 @@ class _MyRidesState extends State<MyRides> {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          '${list[index]['goods_type']}',
+                          '${list[index]['goods_type'].toString().replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').replaceAll('"', '')}',
                           style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
                         ),
@@ -317,749 +356,87 @@ class _MyRidesState extends State<MyRides> {
                   SizedBox(
                     height: Dim().d8,
                   ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Est. Fare',
-                          style: Sty().smallText.copyWith(
+                  if(list[index]['status_text'] == 'Completed')
+                    Padding(
+                      padding:  EdgeInsets.only(bottom: Dim().d12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Company Charge',
+                              style: Sty().smallText.copyWith(
                                 color: Color(0xff7a7a7a),
                               ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          '₹0',
-                          style:
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '₹${list[index]['company_charge']}',
+                              style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  Text(
-                    'Pick up contact :',
-                    style: Sty().mediumText.copyWith(
-                          color: Color(0xff7a7a7a),
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${list[index]['pickup_name']}',
-                        style: Sty()
-                            .mediumText
-                            .copyWith(color: Clr().primaryColor),
-                      ),
-                      Wrap(
-                        children: [
-                          SizedBox(
-                            height: 35,
-                            width: 90,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  STM().openDialer(
-                                      '${list[index]['pickup_mobile']}');
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xff07CB55),
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.call,
-                                      color: Clr().white,
-                                      size: 16,
-                                    ),
-                                    SizedBox(
-                                      width: Dim().d8,
-                                    ),
-                                    Text(
-                                      'Call',
-                                      style: Sty().mediumText.copyWith(
-                                            fontSize: 14,
-                                            color: Clr().white,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                    ),
-                                  ],
-                                )),
-                          ),
-                          SizedBox(
-                            width: Dim().d8,
-                          ),
-                          SizedBox(
-                            height: 35,
-                            width: 50,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  MapsLauncher.launchCoordinates(
-                                      double.parse(
-                                          list[index]['latitude'].toString()),
-                                      double.parse(
-                                          list[index]['longitude'].toString()));
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Clr().white,
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      side: BorderSide(
-                                        color:
-                                            Color(0xff7a7a7a).withOpacity(0.5),
-                                      ),
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: SvgPicture.asset('assets/pin.svg')),
+                            ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  SizedBox(
-                    height: Dim().d12,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: ElevatedButton(
-                              onPressed: () {
-                                _cancelDailog(ctx);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: Clr().white,
-                                  elevation: 0.5,
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(color: Clr().red),
-                                    borderRadius: BorderRadius.circular(50),
-                                  )),
-                              child: Text(
-                                'Cancel Ride',
-                                style: Sty().mediumText.copyWith(
-                                      fontSize: 16,
-                                      color: Clr().red,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              )),
-                        ),
-                      ),
-                      SizedBox(
-                        width: Dim().d12,
-                      ),
-                      Expanded(
-                        child: SizedBox(
-                          height: 40,
-                          child: ElevatedButton(
-                              onPressed: () {
-                                // if (formKey.currentState!.validate()) {
-                                //   STM().checkInternet(context, widget).then((value) {
-                                //     if (value) {
-                                //       // sendOtp();
-                                _enterOTPDialog(ctx);
-                                //     }
-                                //   });
-                                // }
-                                // ;
-                              },
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor: Clr().primaryColor,
-                                  elevation: 0.5,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(50),
-                                  )),
-                              child: Text(
-                                'Start Ride',
-                                style: Sty().mediumText.copyWith(
-                                      fontSize: 16,
-                                      color: Clr().white,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              )),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d20,
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  ///On going Layout
-  Widget onGoingLayout(ctx, index, list) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Clr().borderColor.withOpacity(0.3),
-            spreadRadius: 3,
-            blurRadius: 2,
-            offset: Offset(0, 2), // changes position of shadow
-          ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          // side: BorderSide(
-          //   color: Colors.grey,
-          //   width: 0.5,
-          // ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(Dim().d12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Trip ID : 2135563',
-                    style: Sty().microText.copyWith(color: Clr().grey2),
-                  ),
-                  Text(
-                    '14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(color: Color(0xff939393)),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dim().d12),
-              child: Divider(),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dim().d20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'From',
-                    style: Sty().smallText.copyWith(
-                          color: Clr().primaryColor,
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Text(
-                    '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Text(
-                    'To',
-                    style: Sty().smallText.copyWith(
-                          color: Clr().red,
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Text(
-                    '1901 Thornridge Cir. Shiloh, Hawaii 81063',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Goods type',
-                          style: Sty().smallText.copyWith(
-                                color: Color(0xff7a7a7a),
-                              ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Building / Construction',
-                          style:
-                              Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Date & Time',
-                          style: Sty().smallText.copyWith(
-                                color: Color(0xff7a7a7a),
-                              ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Dec 18, 2023|12:30Pm',
-                          style:
-                              Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Est. Fare',
-                          style: Sty().smallText.copyWith(
-                                color: Color(0xff7a7a7a),
-                              ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          '₹500',
-                          style:
-                              Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  Text(
-                    'Pick up contact :',
-                    style: Sty().mediumText.copyWith(
-                          color: Color(0xff7a7a7a),
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Aniket Mahakal',
-                        style: Sty()
-                            .mediumText
-                            .copyWith(color: Clr().primaryColor),
-                      ),
-                      Wrap(
-                        children: [
-                          SizedBox(
-                            height: 35,
-                            width: 90,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xff07CB55),
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.call,
-                                      color: Clr().white,
-                                      size: 16,
-                                    ),
-                                    SizedBox(
-                                      width: Dim().d8,
-                                    ),
-                                    Text(
-                                      'Call',
-                                      style: Sty().mediumText.copyWith(
-                                            fontSize: 14,
-                                            color: Clr().white,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                    ),
-                                  ],
-                                )),
-                          ),
-                          SizedBox(
-                            width: Dim().d8,
-                          ),
-                          SizedBox(
-                            height: 35,
-                            width: 50,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Clr().white,
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      side: BorderSide(
-                                        color:
-                                            Color(0xff7a7a7a).withOpacity(0.5),
-                                      ),
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: SvgPicture.asset('assets/pin.svg')),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  Text(
-                    'Receiver contact :',
-                    style: Sty().mediumText.copyWith(
-                          color: Color(0xff7a7a7a),
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Darshan Jadhav',
-                        style: Sty()
-                            .mediumText
-                            .copyWith(color: Clr().primaryColor),
-                      ),
-                      Wrap(
-                        children: [
-                          SizedBox(
-                            height: 35,
-                            width: 90,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xff07CB55),
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.call,
-                                      color: Clr().white,
-                                      size: 16,
-                                    ),
-                                    SizedBox(
-                                      width: Dim().d8,
-                                    ),
-                                    Text(
-                                      'Call',
-                                      style: Sty().mediumText.copyWith(
-                                            fontSize: 14,
-                                            color: Clr().white,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                    ),
-                                  ],
-                                )),
-                          ),
-                          SizedBox(
-                            width: Dim().d8,
-                          ),
-                          SizedBox(
-                            height: 35,
-                            width: 50,
-                            child: ElevatedButton(
-                                onPressed: () {
-                                  // if (formKey.currentState!.validate()) {
-                                  //   STM().checkInternet(context, widget).then((value) {
-                                  //     if (value) {
-                                  //       // sendOtp();
-                                  // STM().redirect2page(ctx, RequestDetails());
-                                  //     }
-                                  //   });
-                                  // };
-                                },
-                                style: ElevatedButton.styleFrom(
-                                    backgroundColor: Clr().white,
-                                    elevation: 0.5,
-                                    shape: RoundedRectangleBorder(
-                                      side: BorderSide(
-                                        color:
-                                            Color(0xff7a7a7a).withOpacity(0.5),
-                                      ),
-                                      borderRadius: BorderRadius.circular(50),
-                                    )),
-                                child: SvgPicture.asset('assets/pin.svg')),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  SizedBox(
-                    height: Dim().d12,
-                  ),
-                  Center(
-                    child: SizedBox(
-                      height: 40,
-                      width: 180,
-                      child: ElevatedButton(
-                          onPressed: () {
-                            // if (formKey.currentState!.validate()) {
-                            //   STM().checkInternet(context, widget).then((value) {
-                            //     if (value) {
-                            //       // sendOtp();
-                            // STM().redirect2page(ctx, MyRides());
-                            //     }
-                            //   });
-                            // }
-                            // ;
-                          },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Clr().primaryColor,
-                              elevation: 0.5,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              )),
-                          child: Text(
-                            'Load Session',
-                            style: Sty().mediumText.copyWith(
-                                  fontSize: 16,
-                                  color: Clr().white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          )),
                     ),
-                  ),
-                  SizedBox(
-                    height: Dim().d20,
-                  )
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Completed Layout
-  Widget completeLayout(ctx, index, list) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Clr().borderColor.withOpacity(0.3),
-            spreadRadius: 3,
-            blurRadius: 2,
-            offset: Offset(0, 2), // changes position of shadow
-          ),
-        ],
-      ),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          // side: BorderSide(
-          //   color: Colors.grey,
-          //   width: 0.5,
-          // ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(Dim().d12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Trip ID : 2135563',
-                    style: Sty().microText.copyWith(color: Clr().grey2),
-                  ),
-                  Text(
-                    '14/10/2023 | 12:30Pm',
-                    style: Sty().microText.copyWith(color: Color(0xff939393)),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dim().d12),
-              child: Divider(),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: Dim().d20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'From',
-                    style: Sty().smallText.copyWith(
-                          color: Clr().primaryColor,
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Text(
-                    '2972 Westheimer Rd. Santa Ana, Illinois 85486 ',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Text(
-                    'To',
-                    style: Sty().smallText.copyWith(
-                          color: Clr().red,
-                        ),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Text(
-                    '1901 Thornridge Cir. Shiloh, Hawaii 81063',
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: Sty().microText.copyWith(color: Color(0xff7a7a7a)),
-                  ),
-                  SizedBox(
-                    height: Dim().d4,
-                  ),
-                  Divider(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Goods type',
-                          style: Sty().smallText.copyWith(
+                  if(list[index]['status_text'] == 'Completed')
+                    Padding(
+                      padding:  EdgeInsets.only(bottom: Dim().d12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Total Distance',
+                              style: Sty().smallText.copyWith(
                                 color: Color(0xff7a7a7a),
                               ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Building / Construction',
-                          style:
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '${list[index]['total_distance']}km',
+                              style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Date & Time',
-                          style: Sty().smallText.copyWith(
+                    ),
+                  if(list[index]['status_text'] == 'Completed')
+                    Padding(
+                      padding:  EdgeInsets.only(bottom: Dim().d12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              'Driver Payble Amount',
+                              style: Sty().smallText.copyWith(
                                 color: Color(0xff7a7a7a),
                               ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Dec 18, 2023|12:30Pm',
-                          style:
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '₹${list[index]['driver_payble_amount']}',
+                              style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  SizedBox(
-                    height: Dim().d8,
-                  ),
+                    ),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1076,7 +453,7 @@ class _MyRidesState extends State<MyRides> {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          '₹500',
+                          '₹${list[index]['total_charge']}',
                           style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
                         ),
@@ -1086,27 +463,378 @@ class _MyRidesState extends State<MyRides> {
                   SizedBox(
                     height: Dim().d4,
                   ),
-                  Divider(),
-                  Text(
-                    'Pick up contact :',
-                    style: Sty().mediumText.copyWith(
-                          color: Color(0xff7a7a7a),
+                  if (list[index]['status_text'] != 'Cancelled')
+                    list[index]['status_text'] == 'Completed'
+                        ? Container()
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Divider(),
+                              Text(
+                                'Pick up contact :',
+                                style: Sty().mediumText.copyWith(
+                                      color: Color(0xff7a7a7a),
+                                    ),
+                              ),
+                              SizedBox(
+                                height: Dim().d8,
+                              ),
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    '${list[index]['pickup_name']}',
+                                    style: Sty()
+                                        .mediumText
+                                        .copyWith(color: Clr().primaryColor),
+                                  ),
+                                  Wrap(
+                                    children: [
+                                      SizedBox(
+                                        height: 35,
+                                        width: 90,
+                                        child: ElevatedButton(
+                                            onPressed: () {
+                                              STM().openDialer(
+                                                  '${list[index]['pickup_mobile']}');
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor:
+                                                    Color(0xff07CB55),
+                                                elevation: 0.5,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(50),
+                                                )),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.call,
+                                                  color: Clr().white,
+                                                  size: 16,
+                                                ),
+                                                SizedBox(
+                                                  width: Dim().d8,
+                                                ),
+                                                Text(
+                                                  'Call',
+                                                  style:
+                                                      Sty().mediumText.copyWith(
+                                                            fontSize: 14,
+                                                            color: Clr().white,
+                                                            fontWeight:
+                                                                FontWeight.w400,
+                                                          ),
+                                                ),
+                                              ],
+                                            )),
+                                      ),
+                                      SizedBox(
+                                        width: Dim().d8,
+                                      ),
+                                      SizedBox(
+                                        height: 35,
+                                        width: 50,
+                                        child: ElevatedButton(
+                                            onPressed: () {
+                                              MapsLauncher.launchCoordinates(
+                                                  double.parse(list[index]
+                                                          ['latitude']
+                                                      .toString()),
+                                                  double.parse(list[index]
+                                                          ['longitude']
+                                                      .toString()));
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                                backgroundColor: Clr().white,
+                                                elevation: 0.5,
+                                                shape: RoundedRectangleBorder(
+                                                  side: BorderSide(
+                                                    color: Color(0xff7a7a7a)
+                                                        .withOpacity(0.5),
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(50),
+                                                )),
+                                            child: SvgPicture.asset(
+                                                'assets/pin.svg')),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                  SizedBox(
+                    height: Dim().d4,
+                  ),
+                  if (list[index]['status_text'] == 'Completed')
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text('Complete',
+                            style: Sty()
+                                .mediumBoldText
+                                .copyWith(color: Clr().green),
+                            textAlign: TextAlign.right),
+                      ],
+                    ),
+                  if (list[index]['status_text'] == 'Ongoing')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(),
+                        Text(
+                          'Receiver contact :',
+                          style: Sty().mediumText.copyWith(
+                                color: Color(0xff7a7a7a),
+                              ),
                         ),
-                  ),
+                        SizedBox(
+                          height: Dim().d8,
+                        ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${list[index]['receiver_name']}',
+                              style: Sty()
+                                  .mediumText
+                                  .copyWith(color: Clr().primaryColor),
+                            ),
+                            Wrap(
+                              children: [
+                                SizedBox(
+                                  height: 35,
+                                  width: 90,
+                                  child: ElevatedButton(
+                                      onPressed: () {
+                                        STM().openDialer(
+                                            '${list[index]['receiver_mobile']}');
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(0xff07CB55),
+                                          elevation: 0.5,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(50),
+                                          )),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.call,
+                                            color: Clr().white,
+                                            size: 16,
+                                          ),
+                                          SizedBox(
+                                            width: Dim().d8,
+                                          ),
+                                          Text(
+                                            'Call',
+                                            style: Sty().mediumText.copyWith(
+                                                  fontSize: 14,
+                                                  color: Clr().white,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                          ),
+                                        ],
+                                      )),
+                                ),
+                                SizedBox(
+                                  width: Dim().d8,
+                                ),
+                                // SizedBox(
+                                //   height: 35,
+                                //   width: 50,
+                                //   child: ElevatedButton(
+                                //       onPressed: () {
+                                //         MapsLauncher.launchCoordinates(
+                                //             double.parse(
+                                //                 list[index]['receiver_address']['latitude'].toString()),
+                                //             double.parse(
+                                //                 list[index]['receiver_address']['longitude'].toString()));
+                                //       },
+                                //       style: ElevatedButton.styleFrom(
+                                //           backgroundColor: Clr().white,
+                                //           elevation: 0.5,
+                                //           shape: RoundedRectangleBorder(
+                                //             side: BorderSide(
+                                //               color:
+                                //               Color(0xff7a7a7a).withOpacity(0.5),
+                                //             ),
+                                //             borderRadius: BorderRadius.circular(50),
+                                //           )),
+                                //       child: SvgPicture.asset('assets/pin.svg')),
+                                // ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   SizedBox(
-                    height: Dim().d8,
+                    height: Dim().d4,
                   ),
-                  Text(
-                    'Aniket Mahakal',
-                    style: Sty().mediumText.copyWith(color: Clr().primaryColor),
-                  ),
+                  if (list[index]['status_text'] == 'Upcoming')
+                    SizedBox(
+                      height: Dim().d12,
+                    ),
+                  if (list[index]['status_text'] == 'Upcoming')
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: ElevatedButton(
+                                onPressed: () {
+                                  _cancelDailog(ctx, list[index]['id']);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Clr().white,
+                                    elevation: 0.5,
+                                    shape: RoundedRectangleBorder(
+                                      side: BorderSide(color: Clr().red),
+                                      borderRadius: BorderRadius.circular(50),
+                                    )),
+                                child: Text(
+                                  'Cancel Ride',
+                                  style: Sty().mediumText.copyWith(
+                                        fontSize: 16,
+                                        color: Clr().red,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                )),
+                          ),
+                        ),
+                        SizedBox(
+                          width: Dim().d12,
+                        ),
+                        Expanded(
+                          child: SizedBox(
+                            height: 40,
+                            child: ElevatedButton(
+                                onPressed: () {
+                                  _enterOTPDialog(ctx, list[index]['id']);
+                                },
+                                style: ElevatedButton.styleFrom(
+                                    backgroundColor: Clr().primaryColor,
+                                    elevation: 0.5,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(50),
+                                    )),
+                                child: Text(
+                                  'Start Ride',
+                                  style: Sty().mediumText.copyWith(
+                                        fontSize: 16,
+                                        color: Clr().white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                )),
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (list[index]['status_text'] == 'Ongoing') Divider(),
+                  if (list[index]['status_text'] == 'Ongoing')
+                    list[index]['sub_status'] == '1' ||
+                            list[index]['sub_status'] == '2' ||
+                            list[index]['sub_status'] == '3'
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                  onPressed: () {
+                                    list[index]['sub_status'] == '1'
+                                        ? STM().redirect2page(
+                                            ctx,
+                                            LoadingSession(
+                                              times: list[index]['updated_at'],
+                                              type: 'view',
+                                              id: list[index]['id'],
+                                            ))
+                                        : list[index]['sub_status'] == '2'
+                                            ? STM().redirect2page(
+                                                ctx,
+                                                RideStarted(
+                                                  type: 'view',
+                                                  times: list[index]
+                                                      ['updated_at'],
+                                                  id: list[index]['id'],
+                                                ))
+                                            : STM().redirect2page(
+                                                ctx,
+                                                Destination(
+                                                  type: 'view',
+                                                  times: list[index]
+                                                      ['updated_at'],
+                                                  id: list[index]['id'],
+                                                ));
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Clr().primaryColor,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(Dim().d20)),
+                                      )),
+                                  child: Center(
+                                    child: Text(
+                                        list[index]['sub_status'] == '1'
+                                            ? 'View Loading Status'
+                                            : list[index]['sub_status'] == '2'
+                                                ? 'View Ride Status'
+                                                : 'View Unloading Status',
+                                        style: Sty()
+                                            .mediumText
+                                            .copyWith(color: Clr().white)),
+                                  )),
+                            ],
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              ElevatedButton(
+                                  onPressed: () {
+                                    startLoad(list[index]['id'],
+                                        list[index]['updated_at']);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor: Clr().primaryColor,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.all(
+                                            Radius.circular(Dim().d20)),
+                                      )),
+                                  child: Center(
+                                    child: Text('Start Loading',
+                                        style: Sty()
+                                            .mediumText
+                                            .copyWith(color: Clr().white)),
+                                  )),
+                            ],
+                          ),
                   SizedBox(
-                    height: Dim().d8,
+                    height: Dim().d4,
                   ),
-                  Text(
-                    '+91 25896 32145',
-                    style: Sty().smallText.copyWith(color: Clr().textcolor),
-                  ),
+                  if (list[index]['status_text'] == 'Cancelled')
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Divider(),
+                        Text(
+                          'Cancellation Reason:',
+                          style: Sty()
+                              .mediumText
+                              .copyWith(color: Clr().primaryColor),
+                        ),
+                        SizedBox(
+                          height: Dim().d8,
+                        ),
+                        Text(
+                          '${list[index]['canellation_reason']}',
+                          style: Sty().smallText.copyWith(color: Clr().red),
+                        ),
+                      ],
+                    ),
                   SizedBox(
                     height: Dim().d20,
                   )
@@ -1309,7 +1037,7 @@ class _MyRidesState extends State<MyRides> {
     );
   }
 
-  _enterOTPDialog(ctx) {
+  _enterOTPDialog(ctx, id) {
     AwesomeDialog(
       isDense: true,
       context: ctx,
@@ -1393,15 +1121,7 @@ class _MyRidesState extends State<MyRides> {
               width: 250,
               child: ElevatedButton(
                   onPressed: () {
-                    // if (formKey.currentState!.validate()) {
-                    //   STM().checkInternet(context, widget).then((value) {
-                    //     if (value) {
-                    //       // sendOtp();
-                    STM().redirect2page(ctx, LoadingSession());
-                    //     }
-                    //   });
-                    // }
-                    // ;
+                    startRide(id, _pinCode);
                   },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Clr().primaryColor,
@@ -1427,7 +1147,7 @@ class _MyRidesState extends State<MyRides> {
     ).show();
   }
 
-  _cancelDailog(ctx) {
+  _cancelDailog(ctx, id) {
     return AwesomeDialog(
         context: ctx,
         dialogType: DialogType.noHeader,
@@ -1454,35 +1174,60 @@ class _MyRidesState extends State<MyRides> {
                   shrinkWrap: true,
                   physics: NeverScrollableScrollPhysics(),
                   itemBuilder: (context, index) {
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: Dim().d12),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: Dim().d8,
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(bottom: Dim().d12),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: Dim().d8,
+                              ),
+                              InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      selectedCancelReason =
+                                          cancelreasonList[index]['reason'];
+                                    });
+                                  },
+                                  child: selectedCancelReason ==
+                                          cancelreasonList[index]['reason']
+                                      ? Icon(Icons.circle, size: Dim().d16)
+                                      : Icon(Icons.circle_outlined,
+                                          size: Dim().d16)),
+                              SizedBox(
+                                width: Dim().d12,
+                              ),
+                              Text('${cancelreasonList[index]['reason']}',
+                                  style: Sty().mediumText),
+                            ],
                           ),
-                          InkWell(
-                              onTap: () {
-                                setState(() {
-                                  selectedCancelReason =
-                                      cancelreasonList[index]['id'];
-                                });
-                              },
-                              child: selectedCancelReason ==
-                                      cancelreasonList[index]['id']
-                                  ? Icon(Icons.circle, size: Dim().d16)
-                                  : Icon(Icons.circle_outlined,
-                                      size: Dim().d16)),
-                          SizedBox(
-                            width: Dim().d12,
-                          ),
-                          Text('${cancelreasonList[index]['reason']}',
-                              style: Sty().mediumText),
-                        ],
-                      ),
+                        ),
+                      ],
                     );
                   },
                 ),
+                SizedBox(height: Dim().d12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                            backgroundColor: Clr().primaryColor,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                    Radius.circular(Dim().d20)))),
+                        onPressed: () {
+                          cancelRide(id, selectedCancelReason);
+                        },
+                        child: Center(
+                          child: Text('Submit',
+                              style: Sty().mediumText.copyWith(
+                                  color: Clr().white,
+                                  fontWeight: FontWeight.w500)),
+                        )),
+                  ],
+                )
               ],
             );
           },
@@ -1511,6 +1256,55 @@ class _MyRidesState extends State<MyRides> {
       setState(() {
         cancelreasonList = result['data'];
       });
+    } else {
+      STM().errorDialog(ctx, result['message']);
+    }
+  }
+
+  void cancelRide(id, reason) async {
+    FormData body = FormData.fromMap({
+      'request_id': id,
+      'reason': reason,
+    });
+    var result = await STM()
+        .postWithToken(ctx, Str().cancelling, 'cancel_ride', body, usertoken);
+    var success = result['success'];
+    if (success) {
+      STM().replacePage(ctx, MyRides(initialindex: 3));
+    } else {
+      STM().errorDialog(ctx, result['message']);
+    }
+  }
+
+  void startRide(id, otp) async {
+    FormData body = FormData.fromMap({
+      'request_id': id,
+      'otp': otp,
+    });
+    var result = await STM()
+        .postWithToken(ctx, Str().cancelling, 'start_ride', body, usertoken);
+    var success = result['success'];
+    if (success) {
+      STM().replacePage(ctx, MyRides(initialindex: 1));
+    } else {
+      STM().errorDialog(ctx, result['message']);
+    }
+  }
+
+  void startLoad(id, time) async {
+    FormData body = FormData.fromMap({
+      'request_id': id,
+    });
+    var result = await STM()
+        .postWithToken(ctx, Str().cancelling, 'load_session', body, usertoken);
+    var success = result['success'];
+    if (success) {
+      STM().displayToast(result['message']);
+      STM().redirect2page(
+          ctx,
+          LoadingSession(
+            id: id,
+          ));
     } else {
       STM().errorDialog(ctx, result['message']);
     }
