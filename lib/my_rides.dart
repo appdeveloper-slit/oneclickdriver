@@ -356,7 +356,7 @@ class _MyRidesState extends State<MyRides> {
                   SizedBox(
                     height: Dim().d8,
                   ),
-                  if(list[index]['status_text'] == 'Completed')
+                  if(list[index]['status_text'] == 'Completed' && list[index]['type'] == 'Cash')
                     Padding(
                       padding:  EdgeInsets.only(bottom: Dim().d12),
                       child: Row(
@@ -383,7 +383,7 @@ class _MyRidesState extends State<MyRides> {
                         ],
                       ),
                     ),
-                  if(list[index]['status_text'] == 'Completed')
+                  if(list[index]['status_text'] == 'Completed' && list[index]['type'] == 'Cash')
                     Padding(
                       padding:  EdgeInsets.only(bottom: Dim().d12),
                       child: Row(
@@ -410,7 +410,7 @@ class _MyRidesState extends State<MyRides> {
                         ],
                       ),
                     ),
-                  if(list[index]['status_text'] == 'Completed')
+                  if(list[index]['status_text'] == 'Completed' && list[index]['type'] == 'Cash')
                     Padding(
                       padding:  EdgeInsets.only(bottom: Dim().d12),
                       child: Row(
@@ -453,7 +453,7 @@ class _MyRidesState extends State<MyRides> {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          '₹${list[index]['total_charge']}',
+                        list[index]['type'] == 'Cash' ? '₹${list[index]['total_charge']}' : 'Fixed',
                           style:
                               Sty().smallText.copyWith(color: Clr().textcolor),
                         ),
@@ -469,7 +469,7 @@ class _MyRidesState extends State<MyRides> {
                         : Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Divider(),
+                              const Divider(),
                               Text(
                                 'Pick up contact :',
                                 style: Sty().mediumText.copyWith(
@@ -483,11 +483,15 @@ class _MyRidesState extends State<MyRides> {
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(
-                                    '${list[index]['pickup_name']}',
-                                    style: Sty()
-                                        .mediumText
-                                        .copyWith(color: Clr().primaryColor),
+                                  Expanded(
+                                    child: Text(
+                                      '${list[index]['pickup_name']}',
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: Sty()
+                                          .mediumText
+                                          .copyWith(color: Clr().primaryColor),
+                                    ),
                                   ),
                                   Wrap(
                                     children: [
@@ -597,11 +601,15 @@ class _MyRidesState extends State<MyRides> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              '${list[index]['receiver_name']}',
-                              style: Sty()
-                                  .mediumText
-                                  .copyWith(color: Clr().primaryColor),
+                            Expanded(
+                              child: Text(
+                                '${list[index]['receiver_name']}',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: Sty()
+                                    .mediumText
+                                    .copyWith(color: Clr().primaryColor),
+                              ),
                             ),
                             Wrap(
                               children: [

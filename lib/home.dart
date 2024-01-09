@@ -887,7 +887,7 @@ class _HomeState extends State<Home> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              v['user']['type'] == 'Cash'
+                              v['type'] == 'Cash'
                                   ? SvgPicture.asset("assets/cash.svg")
                                   : SvgPicture.asset("assets/billing.svg"),
                               SizedBox(
@@ -1099,7 +1099,7 @@ class _HomeState extends State<Home> {
                                     height: Dim().d4,
                                   ),
                                   Text(
-                                    "₹${v['total_charge']}(Est.)",
+                                    v['type'] == 'Cash'  ? "₹${v['total_charge']}(Est.)" : 'Fixed',
                                     style: Sty().smallText.copyWith(
                                         color: Clr().green,
                                         fontWeight: FontWeight.w600),
@@ -1152,7 +1152,7 @@ class _HomeState extends State<Home> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: Dim().d12),
                       child: Text(
-                        '${v['goods_type']}',
+                        '${v['goods_type'].toString().replaceAll('[', '').replaceAll(']', '').replaceAll('"', '').replaceAll('"', '')}',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                         style:
@@ -1313,7 +1313,7 @@ class _HomeState extends State<Home> {
                     color: Clr().textcolor),
                 children: <TextSpan>[
                   TextSpan(
-                    text: '₹${v['total_charge']}',
+                    text: v['type'] == 'Cash' ? '₹${v['total_charge']}' : 'Fixed',
                     style: Sty().smallText.copyWith(
                           color: Clr().secondary,
                           fontSize: 20,

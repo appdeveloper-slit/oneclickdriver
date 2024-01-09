@@ -213,7 +213,7 @@ class _RideCompleteState extends State<RideComplete> {
                               Expanded(
                                 flex: 1,
                                 child: Text(
-                                  '₹${widget.detail['total_charge']}',
+                                 widget.detail['type'] == 'Cash' ? '₹${widget.detail['total_charge']}' : 'Fixed',
                                   style: Sty().smallText.copyWith(
                                       color: Clr().primaryColor,
                                       fontWeight: FontWeight.w600),
